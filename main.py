@@ -29,7 +29,7 @@ if __name__ == "__main__":
     ])
 
     image_buffer = ImageBuffer(1024, 768)
-    render = Render(image_buffer, camera)
+    render = Render(image_buffer, camera, lights, geos)
 
     app = QApplication(sys.argv)
     window = RenderWindow(render)

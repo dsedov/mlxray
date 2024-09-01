@@ -41,7 +41,7 @@ class UsdGeo:
                     index += faceVertexCount
                     continue
                 
-                for i in range(faceVertexCount-1):
+                for i in range(1, faceVertexCount - 1):
                     v0 = faceVertexIndices[index]
                     v1 = faceVertexIndices[index + i]
                     v2 = faceVertexIndices[index + i + 1]
@@ -55,7 +55,6 @@ class UsdGeo:
                     else:
                         face_normal = np.cross(vertices[v1] - vertices[v0], vertices[v2] - vertices[v0])
                         face_normal = face_normal / np.linalg.norm(face_normal)
-                        print(f"Face normal: {face_normal} for vertices {vertices[v0]}, {vertices[v1]}, {vertices[v2]}")
                         triangles = np.vstack((triangles, np.array([ vertices[v0], vertices[v1], vertices[v2], face_normal, face_normal, face_normal])))
                 index += faceVertexCount
             geos.append(triangles)
