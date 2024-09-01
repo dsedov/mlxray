@@ -19,16 +19,8 @@ if __name__ == "__main__":
     lights = UsdLight.load_lights(usd_loader)
     geos = UsdGeo.load_geos(usd_loader)
 
-    dtype = np.dtype([
-        ('box_min', np.float32, (3,)),
-        ('box_max', np.float32, (3,)),
-        ('left_child', np.int32),
-        ('right_child', np.int32),
-        ('primitive_offset', np.int32),
-        ('primitive_count', np.int32)
-    ])
-
     image_buffer = ImageBuffer(1024, 768)
+    
     render = Render(image_buffer, camera, lights, geos)
 
     app = QApplication(sys.argv)

@@ -34,7 +34,7 @@ class UsdGeo:
                     normals = np.vstack((normals, normal))
 
             index = 0
-            triangles = np.empty((0, 3), dtype=np.int32)
+            triangles = np.empty((0, 3), dtype=np.float32)
             for faceVertexCount in faceVertexCounts:
                 if(faceVertexCount < 3):
                     print(f"Skipping face with {faceVertexCount} vertices")
