@@ -1,7 +1,35 @@
-float3 ray_color(Ray ray, const device float* geos, int32_t geos_count, uint depth) {  
+
+
+#define MAX_DEPTH 20
+struct HitRecordStack {
+    HitRecord hit_records[MAX_DEPTH];
+    uint count;
+};
+
+float3 ray_color(Ray ray, const device float* geos, uint geos_count, const uint seed) { 
+    MetalRandom rand(seed);
+    HitRecordStack hit_record_stack;
+    hit_record_stack.count = 0;
+
     HitRecord hit_record = hit(ray, Interval{0.1, 10000.0}, geos, geos_count);
-    if(!hit_record.hit) {
+    if (!hit_record.hit) {
         return float3(0.0, 0.0, 0.0);
     }
-    return 0.5 * (hit_record.normal + float3(1.0, 1.0, 1.0));
+
+    hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;
+    hit_record_stack.count++;
+
+    for (uint i = 1; i < MAX_DEPTH; i++) {
+        float3 direction = rand.rand_on_hemisphere(-hit_record.normal);
+        hit_record = hit(Ray{hit_record.p, direction}, Interval{0.0001, 10000.0}, geos, geos_count);
+        if (hit_record.hit) {
+            hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;
+            hit_record_stack.count++;
+        }
+    }
+    float3 color = float3(1.0, 1.0, 1.0);
+    for (uint i = hit_record_stack.count; i > 0; i--) {
+        color *= 0.8;
+    }
+    return color;
 }

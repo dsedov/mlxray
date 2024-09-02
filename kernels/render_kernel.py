@@ -29,7 +29,7 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
                         float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), random_seed);
 
-    float3 color = ray_color(ray, geos, geos_count, 0);
+    float3 color = ray_color(ray, geos, geos_count, elem*2 + random_seed);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -41,17 +41,17 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
         header=header,
     )
     # Generate a random uint variable
-    random_uint = mx.random.randint(0, 2**5 - 1)
+    random_uint = mx.random.randint(0, 2**20)
 
     outputs = kernel(
         inputs={
-                "image_buffernp": image_buffer, 
+                "image_buffer": image_buffer, 
                 "camera_center" : camera_center,
                 "pixel00_loc"   : pixel00_loc,
                 "pixel_delta_u" : pixel_delta_u,
                 "pixel_delta_v" : pixel_delta_v,
                 "geos"          : geos,
-                "geos_count"    : int(geos.shape[0]/6),
+                "geos_count"    : geos.shape[0]//6,
                 "random_seed"   : random_uint
                 }, 
         template={"T": mx.float32}, 

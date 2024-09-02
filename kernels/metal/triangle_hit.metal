@@ -2,7 +2,7 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     HitRecord hit_record;
     hit_record.hit = false;
 
-    float EPSILON = 1e-8;
+    float EPSILON = 1e-9;
     float3 edge1 = v1 - v0;
     float3 edge2 = v2 - v0;
     float3 h = cross(ray.direction, edge2);
@@ -41,8 +41,8 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, int32_t geos_count) {
-    int32_t i = 0;
+HitRecord hit(Ray ray, Interval ray_t, const device float* geos, uint geos_count) {
+    uint i = 0;
     HitRecord global_hit_record;
 
     for(i = 0; i < geos_count; i++) {

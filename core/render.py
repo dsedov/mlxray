@@ -57,8 +57,10 @@ class Render(QThread):
         print (f"pixel00_loc: {self.pixel00_loc}")
         print (f"pixel_delta_u: {self.pixel_delta_u}")
         print (f"pixel_delta_v: {self.pixel_delta_v}")
-        # prepare geometry
-        while self.running:
+
+        sample = 2048
+        np_image_buffer = None
+        for i in range(sample):
             self.image_buffer.data = render_kernel(
                 image_buffer  = self.image_buffer.data, 
                 camera_center = self.camera.center,
@@ -67,10 +69,16 @@ class Render(QThread):
                 pixel_delta_v = self.pixel_delta_v,
                 geos          = geos)
             # show image buffer
-            np_image_buffer = np.array(self.image_buffer.data)
-            image_data = (np_image_buffer * 255).astype(np.uint8)
-            self.image_ready.emit(image_data)
+            if np_image_buffer is None:
+                np_image_buffer = np.array(self.image_buffer.data)
+                image_data = (np_image_buffer * 255).astype(np.uint8)
+                self.image_ready.emit(image_data)
+            else:
+                np_image_buffer += np.array(self.image_buffer.data)
 
+                image_data = ( (np_image_buffer / float(i)) * 255).astype(np.uint8)
+                self.image_ready.emit(image_data)
+            print(i)
 
     def stop(self):
         self.running = False
