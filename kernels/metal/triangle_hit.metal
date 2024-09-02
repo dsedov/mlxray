@@ -1,3 +1,45 @@
+/*
+ BVH INDEX LAYOUT
+  [0] - left index
+  [1] - right index
+  [2] - parent index
+  [3] - depth
+*/
+
+class BHV {
+    BVH(
+            int index, 
+            const device float* geos, 
+            const device float* bboxes, 
+            const device int*   indices,
+            
+            const device int* geo_pointers,
+            const device int* geo_pointers_count
+            ) {
+        this.index = index;
+        this.geos = geos;
+        this.bboxes = bboxes;
+        this.indices = indices;
+        this.geo_pointers = geo_pointers;
+        this.geo_pointers_count = geo_pointers_count;
+    }
+    BVH left(){
+        return BVH(indices[index * 2], this.geos, this.bboxes, this.indices, this.geo_pointers, this.geo_pointers_count);
+    }
+
+    BVH right(){
+        return BVH(indices[index * 2 + 1], this.geos, this.bboxes, this.indices, this.geo_pointers, this.geo_pointers_count);
+    }
+
+    private:
+    int index;
+    const device float* geos;
+    const device float* bboxes;
+    const device int* indices;
+    const device int* geo_pointers;
+    const device int* geo_pointers_count;
+}
+
 HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2, float3 n0, float3 n1, float3 n2) {
     HitRecord hit_record;
     hit_record.hit = false;
@@ -44,6 +86,8 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
 HitRecord hit(Ray ray, Interval ray_t, const device float* geos, uint geos_count) {
     uint i = 0;
     HitRecord global_hit_record;
+
+
 
     for(i = 0; i < geos_count; i++) {
         float3 v0 = float3(geos[i * 18],      geos[i * 18 + 1],  geos[i * 18 + 2]);

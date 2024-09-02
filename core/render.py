@@ -43,7 +43,8 @@ class Render(QThread):
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v)
 
     def run(self):
-        # prepare lights
+        
+        print("Preparing geos")
         all_geos = None 
         for geo in self.geos:
             if all_geos is None:
@@ -51,6 +52,8 @@ class Render(QThread):
             else:
                 all_geos = np.vstack((all_geos, geo))
         geos = mx.array(all_geos)
+        print("Building BHV")
+        
         
         print (f"Rendering geos with shape {geos.shape}")
         print (f"Rendering image with shape {self.image_buffer.data.shape}")

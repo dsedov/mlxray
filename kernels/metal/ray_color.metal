@@ -6,7 +6,7 @@ struct HitRecordStack {
     uint count;
 };
 
-float3 ray_color(Ray ray, const device float* geos, uint geos_count, const uint seed) { 
+float3 ray_color(Ray ray, const device float* geos, uint geos_count, const device float* bvh, uint *bvh_const uint seed) { 
     MetalRandom rand(seed);
     HitRecordStack hit_record_stack;
     hit_record_stack.count = 0;
