@@ -42,7 +42,7 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
     )
     # Generate a random uint variable
     random_uint = mx.random.randint(0, 2**5 - 1)
-    
+
     outputs = kernel(
         inputs={
                 "image_buffernp": image_buffer, 
@@ -51,7 +51,7 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
                 "pixel_delta_u" : pixel_delta_u,
                 "pixel_delta_v" : pixel_delta_v,
                 "geos"          : geos,
-                "geos_count"    : geos.shape[0],
+                "geos_count"    : int(geos.shape[0]/6),
                 "random_seed"   : random_uint
                 }, 
         template={"T": mx.float32}, 
