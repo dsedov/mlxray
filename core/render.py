@@ -58,9 +58,17 @@ class Render(QThread):
         print (f"pixel_delta_u: {self.pixel_delta_u}")
         print (f"pixel_delta_v: {self.pixel_delta_v}")
 
-        sample = 2048
+        sample = 256
         np_image_buffer = None
-        for i in range(sample):
+        from tqdm import tqdm
+
+        import time
+
+        start_time = time.time()
+
+        for i in tqdm(range(sample), desc="Rendering", unit="sample"):
+            if not self.running:
+                break 
             self.image_buffer.data = render_kernel(
                 image_buffer  = self.image_buffer.data, 
                 camera_center = self.camera.center,
@@ -76,9 +84,15 @@ class Render(QThread):
             else:
                 np_image_buffer += np.array(self.image_buffer.data)
 
-                image_data = ( (np_image_buffer / float(i)) * 255).astype(np.uint8)
+                image_data = ((np_image_buffer / float(i+1)) * 255).astype(np.uint8)
                 self.image_ready.emit(image_data)
-            print(i)
+            
+            # Update progress bar
+            tqdm.write(f"Completed {i+1}/{sample} samples")
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Total rendering time: {elapsed_time:.2f} seconds")
 
     def stop(self):
         self.running = False
