@@ -1,5 +1,6 @@
 import mlx.core as mx
 from typing import List, Tuple
+from tqdm import tqdm
 
 class BVHNode:
     def __init__(self, start: int, end: int, bbox: mx.array):
@@ -18,26 +19,36 @@ class BVH:
         self.geo_pointers_count: List[int] = []
         self.bboxes: List[mx.array] = []
 
+        # Sanity check
+        expected_triangle_count = geos.shape[0] // 6
+        print(f"Expected triangle count: {expected_triangle_count}")
+
         # Build the BVH
         self._build()
 
     def _build(self):
         # Initialize with all triangles
-        triangles = [(i, self._compute_bbox(i)) for i in range(self.geos.shape[0] // 6)]
+        triangles = [(i, self._compute_bbox(i)) for i in tqdm(range(self.geos.shape[0] // 6), desc="Computing bounding boxes")]
         root = self._recursive_build(triangles, 0)
         self._flatten_bvh(root, -1, 0)
+        print("BVH construction completed")
+        print(f"Total nodes: {len(self.nodes)}")
+        print(f"Total leaf nodes: {sum(1 for node in self.nodes if node.left is None and node.right is None)}")
+        print(f"BVH depth: {max(self.indices[3::4])}")
+        print(f"Number of triangles: {len(triangles)}")  # Use len(triangles) instead of len(self.geo_pointers_count)
+        print(f"Total triangles in leaves: {sum(self.geo_pointers_count)}")
 
     def _recursive_build(self, triangles: List[Tuple[int, mx.array]], depth: int) -> BVHNode:
-        start, end = 0, len(triangles)
+        start, end = triangles[0][0], triangles[-1][0] + 1
         
         # Compute bounding box for this node
         bbox = self._compute_node_bbox([t[1] for t in triangles])
         
         node = BVHNode(start, end, bbox)
         
-        if end - start <= 4 or depth > 20:  # Leaf node
+        if len(triangles) <= 4 or depth > 20:  # Leaf node
             self.geo_pointers.append(start)
-            self.geo_pointers_count.append(end - start)
+            self.geo_pointers_count.append(len(triangles))  # Use len(triangles) instead of end - start
             return node
         
         # Choose split axis (alternate between x, y, z)
@@ -46,7 +57,7 @@ class BVH:
         # Sort triangles based on centroid along the chosen axis
         triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
         
-        mid = (start + end) // 2
+        mid = len(triangles) // 2
         node.left = self._recursive_build(triangles[:mid], depth + 1)
         node.right = self._recursive_build(triangles[mid:], depth + 1)
         
