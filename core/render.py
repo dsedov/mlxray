@@ -1,4 +1,3 @@
-
 from .image import ImageBuffer
 from .camera import Camera
 import mlx.core as mx
@@ -6,6 +5,7 @@ import numpy as np
 from kernels.render_kernel import render_kernel
 from PySide6.QtCore import QThread, Signal
 from .vector import *
+from .bvh import BVH  # Assuming you have a BVH class implemented
 
 class Render(QThread):
     image_ready = Signal(np.ndarray)
@@ -43,7 +43,6 @@ class Render(QThread):
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v)
 
     def run(self):
-        
         print("Preparing geos")
         all_geos = None 
         for geo in self.geos:
@@ -52,14 +51,19 @@ class Render(QThread):
             else:
                 all_geos = np.vstack((all_geos, geo))
         geos = mx.array(all_geos)
-        print("Building BHV")
         
+        print("Building BVH")
+        bvh = BVH(geos)
+        bboxes = mx.array(bvh.get_bboxes())
+        indices = mx.array(bvh.get_indices())
+        geo_pointers = mx.array(bvh.get_geo_pointers())
+        geo_pointers_count = mx.array(bvh.get_geo_pointers_count())
         
-        print (f"Rendering geos with shape {geos.shape}")
-        print (f"Rendering image with shape {self.image_buffer.data.shape}")
-        print (f"pixel00_loc: {self.pixel00_loc}")
-        print (f"pixel_delta_u: {self.pixel_delta_u}")
-        print (f"pixel_delta_v: {self.pixel_delta_v}")
+        print(f"Rendering geos with shape {geos.shape}")
+        print(f"Rendering image with shape {self.image_buffer.data.shape}")
+        print(f"pixel00_loc: {self.pixel00_loc}")
+        print(f"pixel_delta_u: {self.pixel_delta_u}")
+        print(f"pixel_delta_v: {self.pixel_delta_v}")
 
         sample = 256
         np_image_buffer = None
@@ -78,7 +82,12 @@ class Render(QThread):
                 pixel00_loc   = self.pixel00_loc, 
                 pixel_delta_u = self.pixel_delta_u, 
                 pixel_delta_v = self.pixel_delta_v,
-                geos          = geos)
+                geos          = geos,
+                bboxes        = bboxes,
+                indices       = indices,
+                geo_pointers  = geo_pointers,
+                geo_pointers_count = geo_pointers_count
+            )
             # show image buffer
             if np_image_buffer is None:
                 np_image_buffer = np.array(self.image_buffer.data)

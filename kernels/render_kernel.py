@@ -1,6 +1,6 @@
 import mlx.core as mx
 
-def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: mx.array, pixel_delta_u: mx.array, pixel_delta_v: mx.array, geos: mx.array):
+def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: mx.array, pixel_delta_u: mx.array, pixel_delta_v: mx.array, geos: mx.array, bboxes: mx.array, indices: mx.array, geo_pointers: mx.array, geo_pointers_count: mx.array):
 
     structures_source = ""
     get_ray_source = ""
@@ -17,7 +17,6 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
         triangle_hit_source = f.read()
     header = structures_source + get_ray_source + triangle_hit_source + ray_color_source
 
-
     source = """
     uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
     uint x = thread_position_in_grid.x;
@@ -29,7 +28,7 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
                         float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), random_seed);
 
-    float3 color = ray_color(ray, geos, geos_count, elem*2 + random_seed);
+    float3 color = ray_color(ray, geos, bboxes, indices, geo_pointers, geo_pointers_count, random_seed);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -51,7 +50,10 @@ def render_kernel(image_buffer: mx.array, camera_center: mx.array, pixel00_loc: 
                 "pixel_delta_u" : pixel_delta_u,
                 "pixel_delta_v" : pixel_delta_v,
                 "geos"          : geos,
-                "geos_count"    : geos.shape[0]//6,
+                "bboxes"        : bboxes,
+                "indices"       : indices,
+                "geo_pointers"  : geo_pointers,
+                "geo_pointers_count": geo_pointers_count,
                 "random_seed"   : random_uint
                 }, 
         template={"T": mx.float32}, 

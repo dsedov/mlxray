@@ -5,40 +5,103 @@
   [2] - parent index
   [3] - depth
 */
+class AABB {
+public:
+    AABB() {}
+    AABB(float3 a, float3 b) : minimum(a), maximum(b) {}
 
-class BHV {
+    float3 minimum;
+    float3 maximum;
+};
+
+bool intersect_aabb(Ray ray, AABB aabb, Interval ray_t) {
+    float3 t_min = (aabb.minimum - ray.origin) / ray.direction;
+    float3 t_max = (aabb.maximum - ray.origin) / ray.direction;
+    
+    float3 t1 = min(t_min, t_max);
+    float3 t2 = max(t_min, t_max);
+    
+    float t_near = max(max(t1.x, t1.y), t1.z);
+    float t_far = min(min(t2.x, t2.y), t2.z);
+    
+    return t_near <= t_far && t_far >= ray_t.min && t_near <= ray_t.max;
+}
+
+class BVH {
+public:
+    BVH() : index(-1), geos(nullptr), bboxes(nullptr), indices(nullptr), geo_pointers(nullptr), geo_pointers_count(nullptr) {}
+    
     BVH(
-            int index, 
-            const device float* geos, 
-            const device float* bboxes, 
-            const device int*   indices,
-            
-            const device int* geo_pointers,
-            const device int* geo_pointers_count
-            ) {
-        this.index = index;
-        this.geos = geos;
-        this.bboxes = bboxes;
-        this.indices = indices;
-        this.geo_pointers = geo_pointers;
-        this.geo_pointers_count = geo_pointers_count;
-    }
-    BVH left(){
-        return BVH(indices[index * 2], this.geos, this.bboxes, this.indices, this.geo_pointers, this.geo_pointers_count);
+        int index, 
+        const device float* geos, 
+        const device float* bboxes, 
+        const device int*   indices,
+        const device int* geo_pointers,
+        const device int* geo_pointers_count
+    ) {
+        this->index = index;
+        this->geos = geos;
+        this->bboxes = bboxes;
+        this->indices = indices;
+        this->geo_pointers = geo_pointers;
+        this->geo_pointers_count = geo_pointers_count;
     }
 
-    BVH right(){
-        return BVH(indices[index * 2 + 1], this.geos, this.bboxes, this.indices, this.geo_pointers, this.geo_pointers_count);
+    void init(
+        int index, 
+        const device float* geos, 
+        const device float* bboxes, 
+        const device int*   indices,
+        const device int* geo_pointers,
+        const device int* geo_pointers_count
+    ) {
+        this->index = index;
+        this->geos = geos;
+        this->bboxes = bboxes;
+        this->indices = indices;
+        this->geo_pointers = geo_pointers;
+        this->geo_pointers_count = geo_pointers_count;
     }
 
-    private:
+    BVH left() {
+        return BVH(indices[index * 4], geos, bboxes, indices, geo_pointers, geo_pointers_count);
+    }
+
+    BVH right() {
+        return BVH(indices[index * 4 + 1], geos, bboxes, indices, geo_pointers, geo_pointers_count);
+    }
+
+    bool is_leaf() {
+        return indices[index * 4 + 3] == 0; // Depth 0 indicates a leaf node
+    }
+
+    AABB get_bbox() {
+        return AABB(
+            float3(bboxes[index * 6], bboxes[index * 6 + 1], bboxes[index * 6 + 2]),
+            float3(bboxes[index * 6 + 3], bboxes[index * 6 + 4], bboxes[index * 6 + 5])
+        );
+    }
+
+    int get_geo_start() {
+        return geo_pointers[index];
+    }
+
+    int get_geo_count() {
+        return geo_pointers_count[index];
+    }
+
+    int get_index() {
+        return index;
+    }
+
+private:
     int index;
     const device float* geos;
     const device float* bboxes;
     const device int* indices;
     const device int* geo_pointers;
     const device int* geo_pointers_count;
-}
+};
 
 HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2, float3 n0, float3 n1, float3 n2) {
     HitRecord hit_record;
@@ -83,28 +146,48 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, uint geos_count) {
-    uint i = 0;
+HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* bboxes, const device int* indices, const device int* geo_pointers, const device int* geo_pointers_count) {
+    BVH root;
+    root.init(0, geos, bboxes, indices, geo_pointers, geo_pointers_count);
     HitRecord global_hit_record;
+    global_hit_record.hit = false;
 
+    // Stack-based traversal
+    BVH stack[64];
+    int stack_ptr = 0;
+    stack[stack_ptr++] = root;
 
+    while (stack_ptr > 0) {
+        BVH node = stack[--stack_ptr];
+        
+        if (!intersect_aabb(ray, node.get_bbox(), ray_t)) {
+            continue;
+        }
 
-    for(i = 0; i < geos_count; i++) {
-        float3 v0 = float3(geos[i * 18],      geos[i * 18 + 1],  geos[i * 18 + 2]);
-        float3 v1 = float3(geos[i * 18 + 3],  geos[i * 18 + 4],  geos[i * 18 + 5]);
-        float3 v2 = float3(geos[i * 18 + 6],  geos[i * 18 + 7],  geos[i * 18 + 8]);
-        float3 n0 = float3(geos[i * 18 + 9],  geos[i * 18 + 10], geos[i * 18 + 11]);
-        float3 n1 = float3(geos[i * 18 + 12], geos[i * 18 + 13], geos[i * 18 + 14]);
-        float3 n2 = float3(geos[i * 18 + 15], geos[i * 18 + 16], geos[i * 18 + 17]);
+        if (node.is_leaf()) {
+            int geo_start = node.get_geo_start();
+            int geo_count = node.get_geo_count();
 
-        HitRecord hit_record = triangle_hit(ray, ray_t, v0, v1, v2, n0, n1, n2);
-        if(hit_record.hit) {
-            ray_t.max = hit_record.t;
-            global_hit_record = hit_record;
+            for (int i = 0; i < geo_count; i++) {
+                int idx = geo_start + i;
+                float3 v0 = float3(geos[idx * 18],     geos[idx * 18 + 1],  geos[idx * 18 + 2]);
+                float3 v1 = float3(geos[idx * 18 + 3], geos[idx * 18 + 4],  geos[idx * 18 + 5]);
+                float3 v2 = float3(geos[idx * 18 + 6], geos[idx * 18 + 7],  geos[idx * 18 + 8]);
+                float3 n0 = float3(geos[idx * 18 + 9], geos[idx * 18 + 10], geos[idx * 18 + 11]);
+                float3 n1 = float3(geos[idx * 18 + 12],geos[idx * 18 + 13], geos[idx * 18 + 14]);
+                float3 n2 = float3(geos[idx * 18 + 15],geos[idx * 18 + 16], geos[idx * 18 + 17]);
+
+                HitRecord hit_record = triangle_hit(ray, ray_t, v0, v1, v2, n0, n1, n2);
+                if (hit_record.hit && hit_record.t < ray_t.max) {
+                    ray_t.max = hit_record.t;
+                    global_hit_record = hit_record;
+                }
+            }
+        } else {
+            stack[stack_ptr++] = node.right();
+            stack[stack_ptr++] = node.left();
         }
     }
-    if(global_hit_record.hit) {
-        return global_hit_record;
-    }
-    return HitRecord();
+
+    return global_hit_record;
 }

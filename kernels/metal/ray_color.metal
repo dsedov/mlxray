@@ -1,32 +1,32 @@
 
-
 #define MAX_DEPTH 20
 struct HitRecordStack {
     HitRecord hit_records[MAX_DEPTH];
     uint count;
 };
 
-float3 ray_color(Ray ray, const device float* geos, uint geos_count, const device float* bvh, uint *bvh_const uint seed) { 
+float3 ray_color(Ray ray, const device float* geos, const device float* bboxes, const device int* indices, const device int* geo_pointers, const device int* geo_pointers_count, uint seed) { 
     MetalRandom rand(seed);
     HitRecordStack hit_record_stack;
     hit_record_stack.count = 0;
 
-    HitRecord hit_record = hit(ray, Interval{0.1, 10000.0}, geos, geos_count);
+    HitRecord hit_record = hit(ray, Interval{0.1, 10000.0}, geos, bboxes, indices, geo_pointers, geo_pointers_count);
     if (!hit_record.hit) {
         return float3(0.0, 0.0, 0.0);
     }
 
     hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;
-    hit_record_stack.count++;
 
     for (uint i = 1; i < MAX_DEPTH; i++) {
         float3 direction = rand.rand_on_hemisphere(-hit_record.normal);
-        hit_record = hit(Ray{hit_record.p, direction}, Interval{0.0001, 10000.0}, geos, geos_count);
+        hit_record = hit(Ray{hit_record.p, direction}, Interval{0.0001, 10000.0}, geos, bboxes, indices, geo_pointers, geo_pointers_count);
         if (hit_record.hit) {
             hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;
-            hit_record_stack.count++;
+        } else {
+            break;
         }
     }
+
     float3 color = float3(1.0, 1.0, 1.0);
     for (uint i = hit_record_stack.count; i > 0; i--) {
         color *= 0.8;
