@@ -92,7 +92,7 @@ class BVH:
         padding = 0.001
         min_bounds -= padding
         max_bounds += padding
-        
+
         return mx.stack([min_bounds, max_bounds])
 
     def get_bboxes(self) -> mx.array:

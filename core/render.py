@@ -73,6 +73,15 @@ class Render(QThread):
 
         start_time = time.time()
 
+        print(f"geos shape: {geos.shape}")
+        print(f"bboxes shape: {bboxes.shape}")
+        print(f"indices shape: {indices.shape}")
+        print(f"geo_pointers shape: {geo_pointers.shape}")
+        print(f"geo_pointers_count shape: {geo_pointers_count.shape}")
+
+        print(f"geo_pointers: {geo_pointers}")
+        print(f"geo_pointers_count: {geo_pointers_count}")
+
         for i in tqdm(range(sample), desc="Rendering", unit="sample"):
             if not self.running:
                 break 
