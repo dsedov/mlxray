@@ -54,12 +54,11 @@ class Render(QThread):
         
         print("Building BVH")
         bvh = BVH(geos)
+        bvh.print_bvh()
+
         bboxes = mx.array(bvh.get_bboxes())
         indices = mx.array(bvh.get_indices())
-        geo_pointers = mx.array(bvh.get_geo_pointers())
-        geo_pointers_count = mx.array(bvh.get_geo_pointers_count())
         
-
         #bvh.print_bvh()
 
         print(f"Rendering geos with shape {geos.shape}")
@@ -79,12 +78,10 @@ class Render(QThread):
         print(f"geos shape: {geos.shape}")
         print(f"bboxes shape: {bboxes.shape}")
         print(f"indices shape: {indices.shape}")
-        print(f"geo_pointers shape: {geo_pointers.shape}")
-        print(f"geo_pointers_count shape: {geo_pointers_count.shape}")
+
 
         print(f"bboxes: {bboxes}")
-        print(f"geo_pointers: {geo_pointers}")
-        print(f"geo_pointers_count: {geo_pointers_count}")
+
 
         for i in tqdm(range(sample), desc="Rendering", unit="sample"):
             if not self.running:
@@ -98,8 +95,6 @@ class Render(QThread):
                 geos          = geos,
                 bboxes        = bboxes,
                 indices       = indices,
-                geo_pointers  = geo_pointers,
-                geo_pointers_count = geo_pointers_count
             )
             # show image buffer
             if np_image_buffer is None:

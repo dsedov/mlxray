@@ -4,6 +4,7 @@
   [1] - right index
   [2] - parent index
   [3] - depth
+  [4] - is_leaf
 */
 class AABB {
 public:
@@ -29,50 +30,42 @@ bool intersect_aabb(Ray ray, AABB aabb, Interval ray_t) {
 
 class BVH {
 public:
-    BVH() : index(-1), geos(nullptr), bboxes(nullptr), indices(nullptr), geo_pointers(nullptr), geo_pointers_count(nullptr) {}
+    BVH() : index(-1), geos(nullptr), bboxes(nullptr), indices(nullptr) {}
     
     BVH(
         int index, 
         const device float* geos, 
         const device float* bboxes, 
-        const device int*   indices,
-        const device int* geo_pointers,
-        const device int* geo_pointers_count
+        const device int*   indices
     ) {
         this->index = index;
         this->geos = geos;
         this->bboxes = bboxes;
         this->indices = indices;
-        this->geo_pointers = geo_pointers;
-        this->geo_pointers_count = geo_pointers_count;
     }
 
     void init(
         int index, 
         const device float* geos, 
         const device float* bboxes, 
-        const device int*   indices,
-        const device int* geo_pointers,
-        const device int* geo_pointers_count
+        const device int*   indices
     ) {
         this->index = index;
         this->geos = geos;
         this->bboxes = bboxes;
         this->indices = indices;
-        this->geo_pointers = geo_pointers;
-        this->geo_pointers_count = geo_pointers_count;
     }
 
     BVH left() {
-        return BVH(indices[index * 4], geos, bboxes, indices, geo_pointers, geo_pointers_count);
+        return BVH(indices[index * 5], geos, bboxes, indices);
     }
 
     BVH right() {
-        return BVH(indices[index * 4 + 1], geos, bboxes, indices, geo_pointers, geo_pointers_count);
+        return BVH(indices[index * 5 + 1], geos, bboxes, indices);
     }
 
     bool is_leaf() {
-        return indices[index * 4 + 3] == 0; // Depth 0 indicates a leaf node
+        return indices[index * 5 + 4] == 1;
     }
 
     AABB get_bbox() {
@@ -83,11 +76,11 @@ public:
     }
 
     int get_geo_start() {
-        return geo_pointers[index];
+        return indices[index * 5];
     }
 
     int get_geo_count() {
-        return geo_pointers_count[index];
+        return indices[index * 5 + 1];
     }
 
     int get_index() {
@@ -99,8 +92,6 @@ private:
     const device float* geos;
     const device float* bboxes;
     const device int* indices;
-    const device int* geo_pointers;
-    const device int* geo_pointers_count;
 };
 
 HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2, float3 n0, float3 n1, float3 n2) {
@@ -146,9 +137,9 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* bboxes, const device int* indices, const device int* geo_pointers, const device int* geo_pointers_count) {
+HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* bboxes, const device int* indices) {
     BVH root;
-    root.init(0, geos, bboxes, indices, geo_pointers, geo_pointers_count);
+    root.init(0, geos, bboxes, indices);
     HitRecord global_hit_record;
     global_hit_record.hit = false;
 

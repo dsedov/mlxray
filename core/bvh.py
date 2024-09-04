@@ -15,54 +15,37 @@ class BVH:
         self.geos = geos
         self.nodes: List[BVHNode] = []
         self.indices: List[int] = []
-        self.geo_pointers: List[int] = []
-        self.geo_pointers_count: List[int] = []
         self.bboxes: List[mx.array] = []
-
-        # Sanity check
-        expected_triangle_count = geos.shape[0] // 6
-        print(f"Expected triangle count: {expected_triangle_count}")
 
         # Build the BVH
         self._build()
 
     def _build(self):
-        # Initialize with all triangles
         triangles = [(i, self._compute_bbox(i)) for i in tqdm(range(self.geos.shape[0] // 6), desc="Computing bounding boxes")]
         root = self._recursive_build(triangles, 0)
         self._flatten_bvh(root, -1, 0)
         print("BVH construction completed")
         print(f"Total nodes: {len(self.nodes)}")
-        print(f"Total leaf nodes: {sum(1 for node in self.nodes if node.left is None and node.right is None)}")
-        print(f"BVH depth: {max(self.indices[3::4])}")
-        print(f"Number of triangles: {len(triangles)}")  # Use len(triangles) instead of len(self.geo_pointers_count)
-        print(f"Total triangles in leaves: {sum(self.geo_pointers_count)}")
+        print(f"Total leaf nodes: {sum(1 for i in range(0, len(self.indices), 5) if self.indices[i+4] == 1)}")
+        print(f"BVH depth: {max(self.indices[3::5])}")
+        print(f"Number of triangles: {len(triangles)}")
 
     def _recursive_build(self, triangles: List[Tuple[int, mx.array]], depth: int) -> BVHNode:
-        # Compute bounding box for this node
         bbox = self._compute_node_bbox([t[1] for t in triangles])
-        
-        # Create node with correct start and end indices
         start = min(t[0] for t in triangles)
-        end   = max(t[0] for t in triangles) + 1
-        node  = BVHNode(start, end, bbox)
+        end = max(t[0] for t in triangles) + 1
+        node = BVHNode(start, end, bbox)
         
         if len(triangles) <= 4 or depth > 20:  # Leaf node
-            self.geo_pointers.append(start)
-            self.geo_pointers_count.append(len(triangles))
             return node
         
-        # Choose split axis (alternate between x, y, z)
         axis = depth % 3
-        
-        # Sort triangles based on centroid along the chosen axis
         triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
         
         mid = len(triangles) // 2
         node.left = self._recursive_build(triangles[:mid], depth + 1)
         node.right = self._recursive_build(triangles[mid:], depth + 1)
         
-        # Update node's start and end based on children
         node.start = min(node.left.start, node.right.start)
         node.end = max(node.left.end, node.right.end)
         
@@ -73,15 +56,16 @@ class BVH:
         self.nodes.append(node)
         self.bboxes.append(node.bbox)
 
-        if node.left is None and node.right is None:  # Leaf node
-            self.indices.extend([node.start, node.end - node.start, parent_idx, depth])
+        is_leaf = node.left is None and node.right is None
+        if is_leaf:
+            self.indices.extend([node.start, node.end - node.start, parent_idx, depth, 1])
         else:
-            self.indices.extend([node_idx, node_idx, parent_idx, depth])
+            self.indices.extend([0, 0, parent_idx, depth, 0])
             left_idx = self._flatten_bvh(node.left, node_idx, depth + 1)
             right_idx = self._flatten_bvh(node.right, node_idx, depth + 1)
             
-            self.indices[node_idx * 4] = left_idx
-            self.indices[node_idx * 4 + 1] = right_idx
+            self.indices[node_idx * 5] = left_idx
+            self.indices[node_idx * 5 + 1] = right_idx
         
         return node_idx
 
@@ -121,31 +105,30 @@ class BVH:
                 print(f"{'  ' * depth}Invalid node index: {index}")
                 return
             
-            node = self.nodes[index]
             indent = "  " * depth
             bbox = self.bboxes[index]
             
-            is_leaf = node.left is None and node.right is None
+            node_data = self.indices[index * 5 : index * 5 + 5]
+            child1, child2, parent, node_depth, is_leaf = node_data
             
             if is_leaf or show_non_leaf_nodes:
                 print(f"{indent}Node {index}:")
-                print(f"{indent}  Depth: {depth}")
+                print(f"{indent}  Depth: {node_depth}")
                 print(f"{indent}  Bounding Box: Min {bbox[0]}, Max {bbox[1]}")
-                print(f"{indent}  Start: {node.start}, End: {node.end}")
+                print(f"{indent}  Child1: {child1}, Child2: {child2}")
+                print(f"{indent}  Is Leaf: {bool(is_leaf)}")
             
-            if is_leaf:  # Leaf node
+            if is_leaf:
                 print(f"{indent}  Leaf Node")
-                print(f"{indent}  Triangles: {node.end - node.start}")
-                for indx in range(node.start, node.end):
+                print(f"{indent}  Triangles: {child2}")
+                for indx in range(child1, child1 + child2):
                     print(f"{indent}  Triangle {indx}: {self.geos[indx * 6: (indx + 1) * 6]}")
             else:
-                left_index = self.indices[index * 4]
-                right_index = self.indices[index * 4 + 1]
                 if show_non_leaf_nodes:
-                    print(f"{indent}  Left Child: {left_index}")
-                    print(f"{indent}  Right Child: {right_index}")
-                print_node(left_index, depth + 1)
-                print_node(right_index, depth + 1)
+                    print(f"{indent}  Left Child: {child1}")
+                    print(f"{indent}  Right Child: {child2}")
+                print_node(child1, depth + 1)
+                print_node(child2, depth + 1)
 
         print("BVH Tree Structure:")
         print(f"Total nodes: {len(self.nodes)}")
