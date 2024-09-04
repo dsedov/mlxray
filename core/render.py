@@ -59,6 +59,9 @@ class Render(QThread):
         geo_pointers = mx.array(bvh.get_geo_pointers())
         geo_pointers_count = mx.array(bvh.get_geo_pointers_count())
         
+
+        bvh.print_bvh()
+
         print(f"Rendering geos with shape {geos.shape}")
         print(f"Rendering image with shape {self.image_buffer.data.shape}")
         print(f"pixel00_loc: {self.pixel00_loc}")
@@ -79,6 +82,7 @@ class Render(QThread):
         print(f"geo_pointers shape: {geo_pointers.shape}")
         print(f"geo_pointers_count shape: {geo_pointers_count.shape}")
 
+        print(f"bboxes: {bboxes}")
         print(f"geo_pointers: {geo_pointers}")
         print(f"geo_pointers_count: {geo_pointers_count}")
 

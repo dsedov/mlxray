@@ -106,3 +106,31 @@ class BVH:
 
     def get_geo_pointers_count(self) -> mx.array:
         return mx.array(self.geo_pointers_count, dtype=mx.int32)
+    
+    def print_bvh(self):
+        def print_node(index, depth):
+            node = self.nodes[index]
+            indent = "  " * depth
+            bbox = self.bboxes[index]
+            
+            print(f"{indent}Node {index}:")
+            print(f"{indent}  Depth: {depth}")
+            print(f"{indent}  Bounding Box: Min {bbox[0]}, Max {bbox[1]}")
+            
+            if node.left is None and node.right is None:  # Leaf node
+                print(f"{indent}  Leaf Node:")
+                for i in range(node.start, node.end):
+                    triangle = self.geos[i*6:(i+1)*6, :3]
+                    print(f"{indent}    Triangle {i}:")
+                    for vertex in triangle:
+                        print(f"{indent}      Vertex: {vertex}")
+            else:
+                left_index = self.indices[index * 4]
+                right_index = self.indices[index * 4 + 1]
+                print(f"{indent}  Left Child: {left_index}")
+                print(f"{indent}  Right Child: {right_index}")
+                print_node(left_index, depth + 1)
+                print_node(right_index, depth + 1)
+
+        print("BVH Tree Structure:")
+        print_node(0, 0)
