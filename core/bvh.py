@@ -36,7 +36,7 @@ class BVH:
         end = max(t[0] for t in triangles) + 1
         node = BVHNode(start, end, bbox)
         
-        if len(triangles) <= 4 or depth > 10:  # Leaf node
+        if len(triangles) <= 4 or depth > 50:  # Leaf node
             return node
         
         axis = depth % 3
