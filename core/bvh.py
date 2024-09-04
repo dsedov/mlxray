@@ -36,18 +36,14 @@ class BVH:
         end = max(t[0] for t in triangles) + 1
         node = BVHNode(start, end, bbox)
         
-        if len(triangles) <= 4 or depth > 50:  # Leaf node
+        if len(triangles) <= 4 or depth > 100:  # Leaf node
             return node
         
-        # Compute the extent of the bounding box along each axis
-        extents = bbox[1] - bbox[0]
 
-        # Select the axis with the greatest extent
-        axis = mx.argmax(extents).item()
-        #axis = depth % 3
+        axis = depth % 3
         triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
-        
         mid = len(triangles) // 2
+
         node.left = self._recursive_build(triangles[:mid], depth + 1)
         node.right = self._recursive_build(triangles[mid:], depth + 1)
         
@@ -116,15 +112,12 @@ class BVH:
             
 
             if is_leaf:
-                print(f"{indent}  Leaf Node")
-                print(f"{indent}  Points: {child2}")
-                #for indx in range(child1, child1 + child2):
-                #    print(f"{indent}  Triangle {indx}: {self.geos[indx * 6: (indx + 1) * 6]}")
+                print(f"{indent}  {depth} Points: {child2}")
             else:
-                if show_non_leaf_nodes:
-                    print(f"{indent}  Left Child: {child1}")
-                    print(f"{indent}  Right Child: {child2}")
+                
+                print(f"{indent}  Left Child:")
                 print_node(child1, depth + 1)
+                print(f"{indent}  Right Child:") 
                 print_node(child2, depth + 1)
 
         print("BVH Tree Structure:")

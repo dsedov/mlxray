@@ -64,7 +64,7 @@ class Render(QThread):
         print("Building BVH")
         bvh = BVH(geos)
         bvh.print_bvh()
-
+        raise Exception("Stop here")
         bboxes = mx.array(bvh.get_bboxes())
         indices = mx.array(bvh.get_indices())
         
