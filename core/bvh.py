@@ -36,7 +36,7 @@ class BVH:
         end = max(t[0] for t in triangles) + 1
         node = BVHNode(start, end, bbox)
         
-        if len(triangles) <= 4 or depth > 20:  # Leaf node
+        if len(triangles) <= 4 or depth > 10:  # Leaf node
             return node
         
         axis = depth % 3
@@ -99,7 +99,7 @@ class BVH:
     def get_geo_pointers_count(self) -> mx.array:
         return mx.array(self.geo_pointers_count, dtype=mx.int32)
     
-    def print_bvh(self, show_non_leaf_nodes=False):
+    def print_bvh(self, show_non_leaf_nodes=True):
         def print_node(index, depth):
             if index == -1 or index >= len(self.nodes):
                 print(f"{'  ' * depth}Invalid node index: {index}")
@@ -111,18 +111,12 @@ class BVH:
             node_data = self.indices[index * 5 : index * 5 + 5]
             child1, child2, parent, node_depth, is_leaf = node_data
             
-            if is_leaf or show_non_leaf_nodes:
-                print(f"{indent}Node {index}:")
-                print(f"{indent}  Depth: {node_depth}")
-                print(f"{indent}  Bounding Box: Min {bbox[0]}, Max {bbox[1]}")
-                print(f"{indent}  Child1: {child1}, Child2: {child2}")
-                print(f"{indent}  Is Leaf: {bool(is_leaf)}")
-            
+
             if is_leaf:
                 print(f"{indent}  Leaf Node")
-                print(f"{indent}  Triangles: {child2}")
-                for indx in range(child1, child1 + child2):
-                    print(f"{indent}  Triangle {indx}: {self.geos[indx * 6: (indx + 1) * 6]}")
+                print(f"{indent}  Points: {child2}")
+                #for indx in range(child1, child1 + child2):
+                #    print(f"{indent}  Triangle {indx}: {self.geos[indx * 6: (indx + 1) * 6]}")
             else:
                 if show_non_leaf_nodes:
                     print(f"{indent}  Left Child: {child1}")

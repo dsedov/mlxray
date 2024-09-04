@@ -67,7 +67,7 @@ class Render(QThread):
         print(f"pixel_delta_u: {self.pixel_delta_u}")
         print(f"pixel_delta_v: {self.pixel_delta_v}")
 
-        sample = 256
+        sample = 64
         np_image_buffer = None
         from tqdm import tqdm
 
