@@ -40,7 +40,7 @@ class BVH:
             return node
         
         axis = depth % 3
-        triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
+        triangles.sort(key=lambda t: mx.mean(t[1][:3, axis]).item())
         
         mid = len(triangles) // 2
         node.left = self._recursive_build(triangles[:mid], depth + 1)
@@ -70,11 +70,9 @@ class BVH:
         return node_idx
 
     def _compute_bbox(self, triangle_idx: int) -> mx.array:
-        triangle = self.geos[triangle_idx * 6: (triangle_idx + 1) * 6, :3]
-
+        triangle = self.geos[triangle_idx * 6: (triangle_idx * 6 + 3), :3]
         min_bounds = mx.min(triangle, axis=0)
         max_bounds = mx.max(triangle, axis=0)
-
         return mx.stack([min_bounds, max_bounds])
 
     def _compute_node_bbox(self, bboxes: List[mx.array]) -> mx.array:
