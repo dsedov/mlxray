@@ -31,27 +31,51 @@ class BVH:
         print(f"Number of triangles: {len(triangles)}")
 
     def _recursive_build(self, triangles: List[Tuple[int, mx.array]], depth: int) -> BVHNode:
-        bbox = self._compute_node_bbox([t[1] for t in triangles])
+        bbox = self._compute_node_bbox([t[1][:3] for t in triangles])
         start = min(t[0] for t in triangles)
         end = max(t[0] for t in triangles) + 1
         node = BVHNode(start, end, bbox)
-        
+
         if len(triangles) <= 4 or depth > 100:  # Leaf node
             return node
-        
 
-        axis = depth % 3
-        triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
-        mid = len(triangles) // 2
+        best_axis = 0
+        best_cost = float('inf')
+        best_split = None
 
-        node.left = self._recursive_build(triangles[:mid], depth + 1)
-        node.right = self._recursive_build(triangles[mid:], depth + 1)
-        
+        for axis in range(3):
+            # Sort triangles based on their centroid along the current axis
+            sorted_triangles = sorted(triangles, key=lambda t: mx.mean(t[1][:3, axis]).item())
+            mid = len(sorted_triangles) // 2
+
+            # Compute bounding boxes for left and right children
+            left_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[:mid]])
+            right_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[mid:]])
+
+            # Compute the cost of this split (combination of overlap and total volume)
+            overlap = self._compute_overlap(left_bbox, right_bbox)
+            total_volume = self._compute_volume(left_bbox) + self._compute_volume(right_bbox)
+            cost = overlap + total_volume
+
+            if cost < best_cost:
+                best_cost = cost
+                best_axis = axis
+                best_split = (sorted_triangles[:mid], sorted_triangles[mid:])
+
+        # Use the best split found
+        node.left = self._recursive_build(best_split[0], depth + 1)
+        node.right = self._recursive_build(best_split[1], depth + 1)
         node.start = min(node.left.start, node.right.start)
         node.end = max(node.left.end, node.right.end)
-        
-        return node
 
+        return node
+    def _compute_overlap(self, bbox1: mx.array, bbox2: mx.array) -> float:
+        overlap = mx.maximum(0, mx.minimum(bbox1[1], bbox2[1]) - mx.maximum(bbox1[0], bbox2[0]))
+        return mx.prod(overlap).item()
+
+    def _compute_volume(self, bbox: mx.array) -> float:
+        extents = bbox[1] - bbox[0]
+        return mx.prod(extents).item()
     def _flatten_bvh(self, node: BVHNode, parent_idx: int, depth: int) -> int:
         node_idx = len(self.nodes)
         self.nodes.append(node)
