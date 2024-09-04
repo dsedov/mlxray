@@ -10,7 +10,7 @@ from .bvh import BVH  # Assuming you have a BVH class implemented
 class Render(QThread):
     image_ready = Signal(np.ndarray)
 
-    def __init__(self, image_buffer: ImageBuffer, camera: Camera, lights: list, geos: list, is_vertical_fov = False, fov_in_degrees = True):
+    def __init__(self, image_buffer: ImageBuffer, camera: Camera, lights: list, geos: list, norms: list, is_vertical_fov = False, fov_in_degrees = True):
         super().__init__()
 
         self.running = True
@@ -18,6 +18,7 @@ class Render(QThread):
         self.camera = camera
         self.lights = lights
         self.geos = geos
+        self.norms = norms
 
         print("Initialized render engine")
         focal_length = mx.linalg.norm(self.camera.center - self.camera.look_at)
@@ -45,13 +46,21 @@ class Render(QThread):
     def run(self):
         print("Preparing geos")
         all_geos = None 
+        all_norms = None
         for geo in self.geos:
             if all_geos is None:
                 all_geos = geo
             else:
                 all_geos = np.vstack((all_geos, geo))
         geos = mx.array(all_geos)
-        
+
+        for norm in self.norms:
+            if all_norms is None:
+                all_norms = norm
+            else:
+                all_norms = np.vstack((all_norms, norm))
+        norms = mx.array(all_norms)
+
         print("Building BVH")
         bvh = BVH(geos)
         bvh.print_bvh()
@@ -93,6 +102,7 @@ class Render(QThread):
                 pixel_delta_u = self.pixel_delta_u, 
                 pixel_delta_v = self.pixel_delta_v,
                 geos          = geos,
+                norms         = norms,
                 bboxes        = bboxes,
                 indices       = indices,
             )

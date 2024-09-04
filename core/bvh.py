@@ -21,7 +21,7 @@ class BVH:
         self._build()
 
     def _build(self):
-        triangles = [(i, self._compute_bbox(i)) for i in tqdm(range(self.geos.shape[0] // 6), desc="Computing bounding boxes")]
+        triangles = [(i, self._compute_bbox(i)) for i in tqdm(range(self.geos.shape[0] // 3), desc="Computing bounding boxes")]
         root = self._recursive_build(triangles, 0)
         self._flatten_bvh(root, -1, 0)
         print("BVH construction completed")
@@ -39,8 +39,13 @@ class BVH:
         if len(triangles) <= 4 or depth > 50:  # Leaf node
             return node
         
-        axis = depth % 3
-        triangles.sort(key=lambda t: mx.mean(t[1][:3, axis]).item())
+        # Compute the extent of the bounding box along each axis
+        extents = bbox[1] - bbox[0]
+
+        # Select the axis with the greatest extent
+        axis = mx.argmax(extents).item()
+        #axis = depth % 3
+        triangles.sort(key=lambda t: mx.mean(t[1][:, axis]).item())
         
         mid = len(triangles) // 2
         node.left = self._recursive_build(triangles[:mid], depth + 1)
@@ -70,7 +75,7 @@ class BVH:
         return node_idx
 
     def _compute_bbox(self, triangle_idx: int) -> mx.array:
-        triangle = self.geos[triangle_idx * 6: (triangle_idx * 6 + 3), :3]
+        triangle = self.geos[triangle_idx * 3: (triangle_idx * 3 + 3), :3]
         min_bounds = mx.min(triangle, axis=0)
         max_bounds = mx.max(triangle, axis=0)
         return mx.stack([min_bounds, max_bounds])

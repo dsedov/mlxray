@@ -137,7 +137,7 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* bboxes, const device int* indices) {
+HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices) {
     BVH root;
     root.init(0, geos, bboxes, indices);
     HitRecord global_hit_record;
@@ -161,12 +161,12 @@ HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device fl
 
             for (int i = 0; i < geo_count; i++) {
                 int idx = geo_start + i;
-                float3 v0 = float3(geos[idx * 18],     geos[idx * 18 + 1],  geos[idx * 18 + 2]);
-                float3 v1 = float3(geos[idx * 18 + 3], geos[idx * 18 + 4],  geos[idx * 18 + 5]);
-                float3 v2 = float3(geos[idx * 18 + 6], geos[idx * 18 + 7],  geos[idx * 18 + 8]);
-                float3 n0 = float3(geos[idx * 18 + 9], geos[idx * 18 + 10], geos[idx * 18 + 11]);
-                float3 n1 = float3(geos[idx * 18 + 12],geos[idx * 18 + 13], geos[idx * 18 + 14]);
-                float3 n2 = float3(geos[idx * 18 + 15],geos[idx * 18 + 16], geos[idx * 18 + 17]);
+                float3 v0 = float3(geos[idx * 9],     geos[idx * 9 + 1],  geos[idx * 9 + 2]);
+                float3 v1 = float3(geos[idx * 9 + 3], geos[idx * 9 + 4],  geos[idx * 9 + 5]);
+                float3 v2 = float3(geos[idx * 9 + 6], geos[idx * 9 + 7],  geos[idx * 9 + 8]);
+                float3 n0 = float3(norms[idx * 9],     norms[idx * 9 + 1],  norms[idx * 9 + 2]);
+                float3 n1 = float3(norms[idx * 9 + 3], norms[idx * 9 + 4],  norms[idx * 9 + 5]);
+                float3 n2 = float3(norms[idx * 9 + 6], norms[idx * 9 + 7],  norms[idx * 9 + 8]);
 
                 HitRecord hit_record = triangle_hit(ray, ray_t, v0, v1, v2, n0, n1, n2);
                 if (hit_record.hit && hit_record.t < ray_t.max) {
