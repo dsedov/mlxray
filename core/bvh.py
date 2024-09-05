@@ -9,6 +9,7 @@ class BVHNode:
         self.start = start
         self.end = end
         self.bbox = bbox
+        self.polygon_indices = []  # New attribute to store polygon indices
 
 class BVH:
     def __init__(self, geos: mx.array):
@@ -16,6 +17,7 @@ class BVH:
         self.nodes: List[BVHNode] = []
         self.indices: List[int] = []
         self.bboxes: List[mx.array] = []
+        self.polygon_indices: List[int] = []  # New attribute to store all polygon indices
 
         # Build the BVH
         self._build()
@@ -32,13 +34,10 @@ class BVH:
 
     def _recursive_build(self, triangles: List[Tuple[int, mx.array]], depth: int) -> BVHNode:
         bbox = self._compute_node_bbox([t[1][:3] for t in triangles])
-        start = min(t[0] for t in triangles)
-        end = max(t[0] for t in triangles) + 1
-        node = BVHNode(start, end, bbox)
+        node = BVHNode(0, len(triangles), bbox)
+        node.polygon_indices = [t[0] for t in triangles]  # Store polygon indices
 
-        # Adjust the leaf node criteria
-        if len(triangles) <= 8 or depth > 30:  # Increased max depth and reduced min triangles
-            print(f"Leaf node created with {len(triangles)} triangles at depth {depth}")
+        if len(triangles) <= 8 or depth > 30:
             return node
 
         best_axis = 0
@@ -111,7 +110,10 @@ class BVH:
 
         is_leaf = node.left is None and node.right is None
         if is_leaf:
-            self.indices.extend([node.start, node.end - node.start, parent_idx, depth, 1])
+            start = len(self.polygon_indices)
+            count = len(node.polygon_indices)
+            self.polygon_indices.extend(node.polygon_indices)
+            self.indices.extend([start, count, parent_idx, depth, 1])
         else:
             self.indices.extend([0, 0, parent_idx, depth, 0])
             left_idx = self._flatten_bvh(node.left, node_idx, depth + 1)
@@ -144,12 +146,9 @@ class BVH:
     def get_indices(self) -> mx.array:
         return mx.array(self.indices, dtype=mx.int32)
 
-    def get_geo_pointers(self) -> mx.array:
-        return mx.array(self.geo_pointers, dtype=mx.int32)
+    def get_polygon_indices(self) -> mx.array:
+        return mx.array(self.polygon_indices, dtype=mx.int32)
 
-    def get_geo_pointers_count(self) -> mx.array:
-        return mx.array(self.geo_pointers_count, dtype=mx.int32)
-    
     def print_bvh(self, show_non_leaf_nodes=True):
         def print_node(index, depth):
             if index == -1 or index >= len(self.nodes):

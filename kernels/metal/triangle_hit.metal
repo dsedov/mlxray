@@ -30,38 +30,42 @@ bool intersect_aabb(Ray ray, AABB aabb, Interval ray_t) {
 
 class BVH {
 public:
-    BVH() : index(-1), geos(nullptr), bboxes(nullptr), indices(nullptr) {}
+    BVH() : index(-1), geos(nullptr), bboxes(nullptr), indices(nullptr), polygon_indices(nullptr) {}
     
     BVH(
         int index, 
         const device float* geos, 
         const device float* bboxes, 
-        const device int*   indices
+        const device int*   indices, 
+        const device int*   polygon_indices
     ) {
         this->index = index;
         this->geos = geos;
         this->bboxes = bboxes;
         this->indices = indices;
+        this->polygon_indices = polygon_indices;
     }
 
     void init(
         int index, 
         const device float* geos, 
         const device float* bboxes, 
-        const device int*   indices
+        const device int*   indices, 
+        const device int*   polygon_indices
     ) {
         this->index = index;
         this->geos = geos;
         this->bboxes = bboxes;
         this->indices = indices;
+        this->polygon_indices = polygon_indices;
     }
 
     BVH left() {
-        return BVH(indices[index * 5], geos, bboxes, indices);
+        return BVH(indices[index * 5], geos, bboxes, indices, polygon_indices);
     }
 
     BVH right() {
-        return BVH(indices[index * 5 + 1], geos, bboxes, indices);
+        return BVH(indices[index * 5 + 1], geos, bboxes, indices, polygon_indices);
     }
 
     bool is_leaf() {
@@ -75,11 +79,11 @@ public:
         );
     }
 
-    int get_geo_start() {
+    int get_polygon_index_start() {
         return indices[index * 5];
     }
 
-    int get_geo_count() {
+    int get_polygon_count() {
         return indices[index * 5 + 1];
     }
 
@@ -92,6 +96,7 @@ private:
     const device float* geos;
     const device float* bboxes;
     const device int* indices;
+    const device int* polygon_indices;
 };
 
 HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2, float3 n0, float3 n1, float3 n2) {
@@ -137,9 +142,9 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices) {
+HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices, const device int* polygon_indices) {
     BVH root;
-    root.init(0, geos, bboxes, indices);
+    root.init(0, geos, bboxes, indices, polygon_indices);
     HitRecord global_hit_record;
     global_hit_record.hit = false;
 
@@ -156,11 +161,11 @@ HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device fl
         }
 
         if (node.is_leaf()) {
-            int geo_start = node.get_geo_start();
-            int geo_count = node.get_geo_count();
+            int polygon_index_start = node.get_polygon_index_start();
+            int polygon_count = node.get_polygon_count();
 
-            for (int i = 0; i < geo_count; i++) {
-                int idx = geo_start + i;
+            for (int i = 0; i < polygon_count; i++) {
+                int idx = polygon_indices[polygon_index_start + i];
                 float3 v0 = float3(geos[idx * 9],     geos[idx * 9 + 1],  geos[idx * 9 + 2]);
                 float3 v1 = float3(geos[idx * 9 + 3], geos[idx * 9 + 4],  geos[idx * 9 + 5]);
                 float3 v2 = float3(geos[idx * 9 + 6], geos[idx * 9 + 7],  geos[idx * 9 + 8]);

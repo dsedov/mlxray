@@ -63,13 +63,11 @@ class Render(QThread):
 
         print("Building BVH")
         bvh = BVH(geos)
-        raise Exception("Stop here")
         bvh.print_bvh()
 
         bboxes = mx.array(bvh.get_bboxes())
         indices = mx.array(bvh.get_indices())
-        
-        #bvh.print_bvh()
+        polygon_indices = mx.array(bvh.get_polygon_indices())
 
         print(f"Rendering geos with shape {geos.shape}")
         print(f"Rendering image with shape {self.image_buffer.data.shape}")
@@ -77,7 +75,7 @@ class Render(QThread):
         print(f"pixel_delta_u: {self.pixel_delta_u}")
         print(f"pixel_delta_v: {self.pixel_delta_v}")
 
-        sample = 64
+        sample = 1024
         np_image_buffer = None
         from tqdm import tqdm
 
@@ -106,6 +104,7 @@ class Render(QThread):
                 norms         = norms,
                 bboxes        = bboxes,
                 indices       = indices,
+                polygon_indices = polygon_indices,  # Add this line
             )
             # show image buffer
             if np_image_buffer is None:
