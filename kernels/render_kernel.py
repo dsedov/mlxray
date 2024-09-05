@@ -30,14 +30,14 @@ def render_kernel(image_buffer: mx.array,
     uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
     uint x = thread_position_in_grid.x;
     uint y = thread_position_in_grid.y;
-    random rand(x, y, random_seed);
+
     Ray ray = get_ray(  float2(float(x), float(y)), 
                         float3(camera_center[0], camera_center[1], camera_center[2]), 
                         float3(pixel00_loc[0], pixel00_loc[1], pixel00_loc[2]), 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
-                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), rand);
+                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), random_seed);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand + elem);
+    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, random_seed + elem);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
