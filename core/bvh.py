@@ -17,90 +17,82 @@ class BVH:
         self.nodes: List[BVHNode] = []
         self.indices: List[int] = []
         self.bboxes: List[mx.array] = []
-        self.polygon_indices: List[int] = []  # New attribute to store all polygon indices
+        self.polygon_indices: List[int] = []
 
         # Build the BVH
         self._build()
 
     def _build(self):
-        triangles = [(i, self._compute_bbox(i)) for i in tqdm(range(self.geos.shape[0] // 3), desc="Computing bounding boxes")]
-        root = self._recursive_build(triangles, 0)
+        num_triangles = self.geos.shape[0] // 3
+        triangles = mx.arange(num_triangles)
+        
+        bboxes_min = mx.stack([mx.min(self.geos[i*3:(i+1)*3, :3], axis=0) for i in range(num_triangles)])
+        bboxes_max = mx.stack([mx.max(self.geos[i*3:(i+1)*3, :3], axis=0) for i in range(num_triangles)])
+        bboxes = mx.concatenate([bboxes_min, bboxes_max], axis=1)
+        
+        root = self._recursive_build(triangles, bboxes, 0)
         self._flatten_bvh(root, -1, 0)
         print("BVH construction completed")
         print(f"Total nodes: {len(self.nodes)}")
         print(f"Total leaf nodes: {sum(1 for i in range(0, len(self.indices), 5) if self.indices[i+4] == 1)}")
         print(f"BVH depth: {max(self.indices[3::5])}")
-        print(f"Number of triangles: {len(triangles)}")
+        print(f"Number of triangles: {num_triangles}")
 
-    def _recursive_build(self, triangles: List[Tuple[int, mx.array]], depth: int) -> BVHNode:
-        bbox = self._compute_node_bbox([t[1][:3] for t in triangles])
-        node = BVHNode(0, len(triangles), bbox)
-        node.polygon_indices = [t[0] for t in triangles]  # Store polygon indices
+    def _recursive_build(self, triangle_indices: mx.array, bboxes: mx.array, depth: int) -> BVHNode:
+        bbox = mx.concatenate([mx.min(bboxes[:, :3], axis=0), mx.max(bboxes[:, 3:], axis=0)])
+        node = BVHNode(0, len(triangle_indices), bbox)
+        node.polygon_indices = triangle_indices.tolist()
 
-        if len(triangles) <= 8 or depth > 30:
+        if len(triangle_indices) <= 8 or depth > 30:
             return node
 
-        best_axis = 0
-        best_cost = float('inf')
-        best_split = None
-
-        # Calculate centroids
-        centroids = mx.stack([mx.mean(t[1][:3], axis=0) for t in triangles])
+        centroids = (bboxes[:, :3] + bboxes[:, 3:]) * 0.5
         centroid_min = mx.min(centroids, axis=0)
         centroid_max = mx.max(centroids, axis=0)
         centroid_extent = centroid_max - centroid_min
 
-        for axis in range(3):
-            if centroid_extent[axis] < 1e-6:  # Skip axes with no extent
+        best_axis = mx.argmax(centroid_extent).item()
+        if centroid_extent[best_axis] < 1e-6:
+            return node
+
+        # Sort triangles based on their centroid along the best axis
+        sorted_indices = mx.argsort(centroids[:, best_axis])
+        triangle_indices = triangle_indices[sorted_indices]
+        bboxes = bboxes[sorted_indices]
+
+        # Try multiple split positions
+        best_cost = float('inf')
+        best_split = None
+
+        for ratio in [0.5, 0.3, 0.7]:
+            split = int(len(triangle_indices) * ratio)
+            if split == 0 or split == len(triangle_indices):
                 continue
 
-            # Sort triangles based on their centroid along the current axis
-            sorted_triangles = sorted(triangles, key=lambda t: mx.mean(t[1][:3, axis]).item())
+            left_bbox = mx.concatenate([mx.min(bboxes[:split, :3], axis=0), mx.max(bboxes[:split, 3:], axis=0)])
+            right_bbox = mx.concatenate([mx.min(bboxes[split:, :3], axis=0), mx.max(bboxes[split:, 3:], axis=0)])
 
-            # Try multiple split positions
-            for ratio in [0.5, 0.3, 0.7]:
-                split = int(len(sorted_triangles) * ratio)
-                if split == 0 or split == len(sorted_triangles):
-                    continue
-
-            # Compute bounding boxes for left and right children
-            left_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[:split]])
-            right_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[split:]])
-
-            # Compute the cost of this split (surface area heuristic)
-            left_cost = self._compute_surface_area(left_bbox) * len(sorted_triangles[:split])
-            right_cost = self._compute_surface_area(right_bbox) * len(sorted_triangles[split:])
+            left_cost = self._compute_surface_area(left_bbox) * split
+            right_cost = self._compute_surface_area(right_bbox) * (len(triangle_indices) - split)
             total_cost = left_cost + right_cost
 
             if total_cost < best_cost:
                 best_cost = total_cost
-                best_axis = axis
-                best_split = (sorted_triangles[:split], sorted_triangles[split:])
-
-        # Force split if no good split was found
-        if best_split is None:
-            print("No good split found, forcing split")
-            mid = len(triangles) // 2
-            best_split = (triangles[:mid], triangles[mid:])
+                best_split = split
 
         # Use the best split found
-        node.left = self._recursive_build(best_split[0], depth + 1)
-        node.right = self._recursive_build(best_split[1], depth + 1)
+        if best_split is None:
+            best_split = len(triangle_indices) // 2
+
+        node.left = self._recursive_build(triangle_indices[:best_split], bboxes[:best_split], depth + 1)
+        node.right = self._recursive_build(triangle_indices[best_split:], bboxes[best_split:], depth + 1)
         node.start = min(node.left.start, node.right.start)
         node.end = max(node.left.end, node.right.end)
 
         return node
 
-    def _compute_overlap(self, bbox1: mx.array, bbox2: mx.array) -> float:
-        overlap = mx.maximum(0, mx.minimum(bbox1[1], bbox2[1]) - mx.maximum(bbox1[0], bbox2[0]))
-        return mx.prod(overlap).item()
-
-    def _compute_volume(self, bbox: mx.array) -> float:
-        extents = bbox[1] - bbox[0]
-        return mx.prod(extents).item()
-
     def _compute_surface_area(self, bbox: mx.array) -> float:
-        extents = bbox[1] - bbox[0]
+        extents = bbox[3:] - bbox[:3]
         return 2 * (extents[0] * extents[1] + extents[1] * extents[2] + extents[2] * extents[0]).item()
 
     def _flatten_bvh(self, node: BVHNode, parent_idx: int, depth: int) -> int:
@@ -123,22 +115,6 @@ class BVH:
             self.indices[node_idx * 5 + 1] = right_idx
         
         return node_idx
-
-    def _compute_bbox(self, triangle_idx: int) -> mx.array:
-        triangle = self.geos[triangle_idx * 3: (triangle_idx * 3 + 3), :3]
-        min_bounds = mx.min(triangle, axis=0)
-        max_bounds = mx.max(triangle, axis=0)
-        return mx.stack([min_bounds, max_bounds])
-
-    def _compute_node_bbox(self, bboxes: List[mx.array]) -> mx.array:
-        all_bboxes = mx.stack(bboxes)
-        min_bounds = mx.min(all_bboxes[:, 0], axis=0)
-        max_bounds = mx.max(all_bboxes[:, 1], axis=0)
-        padding = 0.001
-        min_bounds -= padding
-        max_bounds += padding
-
-        return mx.stack([min_bounds, max_bounds])
 
     def get_bboxes(self) -> mx.array:
         return mx.concatenate(self.bboxes)
