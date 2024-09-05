@@ -36,31 +36,53 @@ class BVH:
         end = max(t[0] for t in triangles) + 1
         node = BVHNode(start, end, bbox)
 
-        if len(triangles) <= 4 or depth > 100:  # Leaf node
+        # Adjust the leaf node criteria
+        if len(triangles) <= 8 or depth > 30:  # Increased max depth and reduced min triangles
+            print(f"Leaf node created with {len(triangles)} triangles at depth {depth}")
             return node
 
         best_axis = 0
         best_cost = float('inf')
         best_split = None
 
+        # Calculate centroids
+        centroids = mx.stack([mx.mean(t[1][:3], axis=0) for t in triangles])
+        centroid_min = mx.min(centroids, axis=0)
+        centroid_max = mx.max(centroids, axis=0)
+        centroid_extent = centroid_max - centroid_min
+
         for axis in range(3):
+            if centroid_extent[axis] < 1e-6:  # Skip axes with no extent
+                continue
+
             # Sort triangles based on their centroid along the current axis
             sorted_triangles = sorted(triangles, key=lambda t: mx.mean(t[1][:3, axis]).item())
-            mid = len(sorted_triangles) // 2
+
+            # Try multiple split positions
+            for ratio in [0.5, 0.3, 0.7]:
+                split = int(len(sorted_triangles) * ratio)
+                if split == 0 or split == len(sorted_triangles):
+                    continue
 
             # Compute bounding boxes for left and right children
-            left_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[:mid]])
-            right_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[mid:]])
+            left_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[:split]])
+            right_bbox = self._compute_node_bbox([t[1][:3] for t in sorted_triangles[split:]])
 
-            # Compute the cost of this split (combination of overlap and total volume)
-            overlap = self._compute_overlap(left_bbox, right_bbox)
-            total_volume = self._compute_volume(left_bbox) + self._compute_volume(right_bbox)
-            cost = overlap + total_volume
+            # Compute the cost of this split (surface area heuristic)
+            left_cost = self._compute_surface_area(left_bbox) * len(sorted_triangles[:split])
+            right_cost = self._compute_surface_area(right_bbox) * len(sorted_triangles[split:])
+            total_cost = left_cost + right_cost
 
-            if cost < best_cost:
-                best_cost = cost
+            if total_cost < best_cost:
+                best_cost = total_cost
                 best_axis = axis
-                best_split = (sorted_triangles[:mid], sorted_triangles[mid:])
+                best_split = (sorted_triangles[:split], sorted_triangles[split:])
+
+        # Force split if no good split was found
+        if best_split is None:
+            print("No good split found, forcing split")
+            mid = len(triangles) // 2
+            best_split = (triangles[:mid], triangles[mid:])
 
         # Use the best split found
         node.left = self._recursive_build(best_split[0], depth + 1)
@@ -69,6 +91,7 @@ class BVH:
         node.end = max(node.left.end, node.right.end)
 
         return node
+
     def _compute_overlap(self, bbox1: mx.array, bbox2: mx.array) -> float:
         overlap = mx.maximum(0, mx.minimum(bbox1[1], bbox2[1]) - mx.maximum(bbox1[0], bbox2[0]))
         return mx.prod(overlap).item()
@@ -76,6 +99,11 @@ class BVH:
     def _compute_volume(self, bbox: mx.array) -> float:
         extents = bbox[1] - bbox[0]
         return mx.prod(extents).item()
+
+    def _compute_surface_area(self, bbox: mx.array) -> float:
+        extents = bbox[1] - bbox[0]
+        return 2 * (extents[0] * extents[1] + extents[1] * extents[2] + extents[2] * extents[0]).item()
+
     def _flatten_bvh(self, node: BVHNode, parent_idx: int, depth: int) -> int:
         node_idx = len(self.nodes)
         self.nodes.append(node)
@@ -134,17 +162,21 @@ class BVH:
             node_data = self.indices[index * 5 : index * 5 + 5]
             child1, child2, parent, node_depth, is_leaf = node_data
             
-
             if is_leaf:
-                print(f"{indent}  {depth} Points: {child2}")
-            else:
-                
-                print(f"{indent}  Left Child:")
+                print(f"{indent}Leaf Node (depth {depth}): {child2} triangles")
+            elif show_non_leaf_nodes:
+                print(f"{indent}Internal Node (depth {depth}):")
                 print_node(child1, depth + 1)
-                print(f"{indent}  Right Child:") 
+                print_node(child2, depth + 1)
+            else:
+                print_node(child1, depth + 1)
                 print_node(child2, depth + 1)
 
         print("BVH Tree Structure:")
         print(f"Total nodes: {len(self.nodes)}")
-        print(f"Indices: {self.indices}")
+        leaf_nodes = [node for node in self.nodes if node.left is None and node.right is None]
+        print(f"Leaf nodes: {len(leaf_nodes)}")
+        print(f"Max depth: {max(self.indices[3::5])}")
+        print(f"Average triangles per leaf: {sum(node.end - node.start for node in leaf_nodes) / len(leaf_nodes):.2f}")
+        print(f"Max triangles in a leaf: {max(node.end - node.start for node in leaf_nodes)}")
         print_node(0, 0)
