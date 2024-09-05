@@ -1,1 +1,1 @@
-no optimization: 256 samples 47.12 seconds
+optimization 256 samples 17.19  BVH construction time: 11.58 seconds

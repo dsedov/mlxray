@@ -6,6 +6,8 @@ from kernels.render_kernel import render_kernel
 from PySide6.QtCore import QThread, Signal
 from .vector import *
 from .bvh import BVH  # Assuming you have a BVH class implemented
+import time
+from tqdm import tqdm
 
 class Render(QThread):
     image_ready = Signal(np.ndarray)
@@ -62,8 +64,11 @@ class Render(QThread):
         norms = mx.array(all_norms)
 
         print("Building BVH")
+        bvh_start_time = time.time()
         bvh = BVH(geos)
-        bvh.print_bvh()
+        bvh_end_time = time.time()
+        print(f"BVH construction time: {bvh_end_time - bvh_start_time:.2f} seconds")
+     
 
         bboxes = mx.array(bvh.get_bboxes())
         indices = mx.array(bvh.get_indices())
@@ -75,11 +80,9 @@ class Render(QThread):
         print(f"pixel_delta_u: {self.pixel_delta_u}")
         print(f"pixel_delta_v: {self.pixel_delta_v}")
 
-        sample = 1024
+        sample = 256
         np_image_buffer = None
-        from tqdm import tqdm
-
-        import time
+        
 
         start_time = time.time()
 

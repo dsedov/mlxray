@@ -37,7 +37,7 @@ def render_kernel(image_buffer: mx.array,
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
                         float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), random_seed);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, random_seed);
+    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, random_seed + elem);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
