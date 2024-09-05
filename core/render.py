@@ -80,7 +80,7 @@ class Render(QThread):
         print(f"pixel_delta_u: {self.pixel_delta_u}")
         print(f"pixel_delta_v: {self.pixel_delta_v}")
 
-        sample = 256
+        samples = 256
         np_image_buffer = None
         
 
@@ -94,7 +94,7 @@ class Render(QThread):
         print(f"bboxes: {bboxes}")
 
 
-        for i in tqdm(range(sample), desc="Rendering", unit="sample"):
+        for i in tqdm(range(samples), desc="Rendering", unit="sample"):
             if not self.running:
                 break 
             self.image_buffer.data = render_kernel(
@@ -103,6 +103,8 @@ class Render(QThread):
                 pixel00_loc   = self.pixel00_loc, 
                 pixel_delta_u = self.pixel_delta_u, 
                 pixel_delta_v = self.pixel_delta_v,
+                sample        = i,
+                samples       = samples,
                 geos          = geos,
                 norms         = norms,
                 bboxes        = bboxes,
@@ -121,7 +123,7 @@ class Render(QThread):
                 self.image_ready.emit(image_data)
             
             # Update progress bar
-            tqdm.write(f"Completed {i+1}/{sample} samples")
+            tqdm.write(f"Completed {i+1}/{samples} samples")
 
         end_time = time.time()
         elapsed_time = end_time - start_time

@@ -5,6 +5,8 @@ def render_kernel(image_buffer: mx.array,
                   pixel00_loc: mx.array, 
                   pixel_delta_u: mx.array, 
                   pixel_delta_v: mx.array, 
+                  sample: int,
+                  samples: int,
                   geos: mx.array,
                   norms: mx.array,
                   bboxes: mx.array, 
@@ -30,14 +32,14 @@ def render_kernel(image_buffer: mx.array,
     uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
     uint x = thread_position_in_grid.x;
     uint y = thread_position_in_grid.y;
-
+    MetalRandom rand(random_seed + elem);
     Ray ray = get_ray(  float2(float(x), float(y)), 
                         float3(camera_center[0], camera_center[1], camera_center[2]), 
                         float3(pixel00_loc[0], pixel00_loc[1], pixel00_loc[2]), 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
-                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), random_seed);
+                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, rand);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, random_seed + elem);
+    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -58,6 +60,8 @@ def render_kernel(image_buffer: mx.array,
                 "pixel00_loc"   : pixel00_loc,
                 "pixel_delta_u" : pixel_delta_u,
                 "pixel_delta_v" : pixel_delta_v,
+                "sample"        : sample,
+                "samples"       : samples,
                 "geos"          : geos,
                 "norms"         : norms,
                 "bboxes"        : bboxes,
