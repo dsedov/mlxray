@@ -2,11 +2,35 @@ import mlx.core as mx
 
 def sharpen_kernel(image_buffer: mx.array):
     source = """
-    uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
+    float sharpening_kernel[9] = {
+        0.0f, -0.2f,  0.0f,
+       -0.2f,  1.8f, -0.2f,
+        0.0f, -0.2f,  0.0f
+    };
     
-    out[elem]     = image_buffer[elem];
-    out[elem + 1] = image_buffer[elem + 1];
-    out[elem + 2] = image_buffer[elem + 2];
+    uint x = thread_position_in_grid.x;
+    uint y = thread_position_in_grid.y;
+    uint width = threads_per_grid.x;
+    uint height = threads_per_grid.y;
+    
+    if (x < width && y < height) {
+        float3 sum = float3(0, 0, 0);
+        
+        for (int ky = -1; ky <= 1; ky++) {
+            for (int kx = -1; kx <= 1; kx++) {
+                int px = clamp(int(x) + kx, 0, int(width) - 1);
+                int py = clamp(int(y) + ky, 0, int(height) - 1);
+                uint idx = (px + py * width) * 3;
+                float3 pixel = float3(image_buffer[idx], image_buffer[idx+1], image_buffer[idx+2]);
+                sum += pixel * sharpening_kernel[(ky+1)*3 + (kx+1)];
+            }
+        }
+        
+        uint elem = (x + y * width) * 3;
+        out[elem]     = clamp(sum.r, 0.0f, 1.0f);
+        out[elem + 1] = clamp(sum.g, 0.0f, 1.0f);
+        out[elem + 2] = clamp(sum.b, 0.0f, 1.0f);
+    }
     """
     kernel = mx.fast.metal_kernel(
         name="sharpen_kernel",
