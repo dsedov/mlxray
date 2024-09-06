@@ -22,11 +22,13 @@ def render_kernel(image_buffer: mx.array,
         structures_source = f.read()
     with open("kernels/metal/get_ray.metal", "r") as f:
         get_ray_source = f.read()
+    with open("kernels/metal/blue_noise.metal", "r") as f:
+        blue_noise_source = f.read()
     with open("kernels/metal/ray_color.metal", "r") as f:
         ray_color_source = f.read()
     with open("kernels/metal/triangle_hit.metal", "r") as f:    
         triangle_hit_source = f.read()
-    header = structures_source + get_ray_source + triangle_hit_source + ray_color_source
+    header = "\n".join([structures_source, get_ray_source, blue_noise_source, triangle_hit_source, ray_color_source])
 
     source = """
     uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
