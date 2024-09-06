@@ -12,7 +12,6 @@ class BlueNoiseGenerator:
     def create_blue_noise(self):
         texture = np.zeros((self.size, self.size), dtype=float)
         values = np.linspace(0, 1, self.size * self.size)
-        #np.random.shuffle(values)
         mask = np.ones((self.size, self.size), dtype=bool)
 
         print(f"Placing initial {self.k} points...")
@@ -72,6 +71,11 @@ if __name__ == "__main__":
     generator = BlueNoiseGenerator(size, k, r)
 
     # Generate and display grayscale noise
-    gray_noise = generator.create_color_noise()
-    generator.display_noise(gray_noise, "Blue Noise")
-    generator.save_noise(gray_noise, "64x64_3d_blue_noise.npy")
+    color_noise = generator.create_color_noise()
+    generator.display_noise(color_noise, "Blue Noise")
+    generator.save_noise(color_noise, "64x64_3d_blue_noise.npy")
+
+    # Generate and display grayscale noise
+    gray_noise = generator.create_blue_noise()
+    generator.display_noise(gray_noise, "Grayscale Blue Noise")
+    generator.save_noise(gray_noise, "64x64_grayscale_blue_noise.npy")

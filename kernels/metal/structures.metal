@@ -50,7 +50,7 @@ public:
     }
 
     // Generate a random point in a unit sphere
-    thread float3 rand_in_unit_sphere() {
+    thread float3 random_in_unit_sphere() {
         while (true) {
             float3 p = float3(rand_range(-1.0, 1.0), rand_range(-1.0, 1.0), rand_range(-1.0, 1.0));
             if (length_squared(p) < 1.0) return p;
@@ -58,13 +58,13 @@ public:
     }
 
     // Generate a random unit vector
-    thread float3 rand_unit_vector() {
-        return normalize(rand_in_unit_sphere());
+    thread float3 random_unit_vector() {
+        return normalize(random_in_unit_sphere());
     }
 
     // Generate a random point on a hemisphere oriented along the normal
-    thread float3 rand_on_hemisphere(float3 normal) {
-        float3 on_unit_sphere = rand_unit_vector();
+    thread float3 random_on_hemisphere(float3 normal) {
+        float3 on_unit_sphere = random_unit_vector();
         if (dot(on_unit_sphere, normal) > 0.0) {
             return on_unit_sphere;
         } else {

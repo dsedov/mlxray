@@ -1,22 +1,27 @@
-Ray get_ray(float2 uv, float3 camera_center, float3 pixel00_loc, float3 pixel_delta_u, float3 pixel_delta_v, uint sample, uint samples, MetalRandom rand, const device float* blue_noise_texture, BlueNoiseRandom blue_noise_rand){
+Ray get_ray(float2 uv, 
+            float3 camera_center, 
+            float3 pixel00_loc, 
+            float3 pixel_delta_u, 
+            float3 pixel_delta_v, 
+            uint sample, 
+            uint samples,
+            uint random_seed,
+            const device float* blue_noise_texture,
+            uint blue_noise_texture_size){
     Ray ray;
 
-    // Calculate stratum size
-    int sqrt_samples = ceil(sqrt(float(samples)));
-    float stratum_size = 1.0f / sqrt_samples;
-    float2 blue_noise = get_blue_noise_sample(sample, samples, blue_noise_texture);
-    
-    // Calculate stratum indices
-    int stratum_x = sample % sqrt_samples;
-    int stratum_y = sample / sqrt_samples;
+    // Calculate the index in the blue noise texture
+    uint x = (sample + random_seed) % blue_noise_texture_size;
+    uint y = ((sample + random_seed) / blue_noise_texture_size) % blue_noise_texture_size;
+    uint blue_noise_index = (y * blue_noise_texture_size + x) * 3;
 
-    // Generate sample within the stratum
-    float px = (stratum_x + blue_noise_rand.rand()) * stratum_size - 0.5f;
-    float py = (stratum_y + blue_noise_rand.rand()) * stratum_size - 0.5f;
-    px += blue_noise.x - 0.5f;
-    py += blue_noise.y - 0.5f;
-    px /= 2.0;
-    py /= 2.0;
+    // Extract float2 from blue noise texture
+    float2 blue_noise_offset = float2(blue_noise_texture[blue_noise_index],
+                                      blue_noise_texture[blue_noise_index + 1]);
+
+    // Use blue noise offset directly
+    float px = blue_noise_offset.x - 0.5f;
+    float py = blue_noise_offset.y - 0.5f;
 
     uv += float2(px, py);
     float3 pixel_sample = pixel00_loc + uv.x * pixel_delta_u + uv.y * pixel_delta_v;

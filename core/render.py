@@ -9,7 +9,7 @@ from .vector import *
 from .bvh import BVH
 import time
 from tqdm import tqdm
-from tools.bluenoise import generate_bluenoise_texture, generate_1d_bluenoise
+from tools.bluenoise import BlueNoiseGenerator
 from scipy.ndimage import gaussian_filter
 
 class Render(QThread):
@@ -77,24 +77,14 @@ class Render(QThread):
         indices = mx.array(bvh.get_indices())
         polygon_indices = mx.array(bvh.get_polygon_indices())
 
-        print(f"Rendering geos with shape {geos.shape}")
-        print(f"Rendering image with shape {self.image_buffer.data.shape}")
-        print(f"pixel00_loc: {self.pixel00_loc}")
-        print(f"pixel_delta_u: {self.pixel_delta_u}")
-        print(f"pixel_delta_v: {self.pixel_delta_v}")
-
-        samples = 128
+        samples = 1024
         np_image_buffer = None
 
         start_time = time.time()
 
-        print(f"geos shape: {geos.shape}")
-        print(f"bboxes shape: {bboxes.shape}")
-        print(f"indices shape: {indices.shape}")
-        print(f"bboxes: {bboxes}")
-
-        blue_noise_texture = mx.array(generate_bluenoise_texture(128, 2, 30))
-        blue_noise_1d = mx.array(generate_1d_bluenoise(1024*16))
+        blue_noise_generator = BlueNoiseGenerator(64, 100, 5)
+        blue_noise_texture = blue_noise_generator.load_noise(filename="64x64_3d_blue_noise.npy")
+        blue_noise_texture_size = blue_noise_texture.shape[0]
 
         for i in tqdm(range(samples), desc="Rendering", unit="sample"):
             if not self.running:
@@ -112,8 +102,8 @@ class Render(QThread):
                 bboxes        = bboxes,
                 indices       = indices,
                 polygon_indices = polygon_indices,
-                blue_noise_texture = blue_noise_texture,
-                blue_noise_1d = blue_noise_1d
+                blue_noise_texture  = blue_noise_texture,
+                blue_noise_texture_size = blue_noise_texture_size,
             )
 
             self.image_buffer.data = sharpen_kernel(self.image_buffer.data)
