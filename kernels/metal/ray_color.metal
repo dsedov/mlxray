@@ -5,7 +5,7 @@ struct HitRecordStack {
     uint count;
 };
 
-float3 ray_color(Ray ray, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices, const device int* polygon_indices, MetalRandom rand, BlueNoiseRandom blue_noise_rand) { 
+float3 ray_color(Ray ray, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices, const device int* polygon_indices, MetalRandom rand, BlueNoiseRandom blue_noise_rand, uint sample, uint samples) { 
     HitRecordStack hit_record_stack;
     hit_record_stack.count = 0;
 

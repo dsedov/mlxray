@@ -137,13 +137,29 @@ private:
     thread uint len;
     thread uint index;
     thread uint state;
+    thread const device float* blue_noise_2d;
+    thread uint blue_noise_index;
+    thread bool has_2d_texture;
 
 public:
+    // Existing constructor
     BlueNoiseRandom(const device float* input_array, uint input_len, uint offset) {
         array = input_array;
         len = input_len;
         index = offset % len;
-        state = offset; // Initialize state with offset for additional randomness
+        state = offset;
+        has_2d_texture = false;
+    }
+
+    // New constructor with 2D blue noise texture
+    BlueNoiseRandom(const device float* input_array, uint input_len, uint offset, const device float* blue_noise_texture) {
+        array = input_array;
+        len = input_len;
+        index = offset % len;
+        state = offset;
+        blue_noise_2d = blue_noise_texture;
+        blue_noise_index = offset % (128 * 128);
+        has_2d_texture = true;
     }
 
     thread float rand() {
@@ -178,5 +194,37 @@ public:
         } else {
             return -on_unit_sphere;
         }
+    }
+
+    thread float3 better_random_on_hemisphere(float3 normal) {
+        if (!has_2d_texture) {
+            return random_on_hemisphere(normal); // Fall back to the original method if 2D texture is not available
+        }
+
+        // Sample two values from the 2D blue noise texture
+        float u = blue_noise_2d[blue_noise_index];
+        float v = blue_noise_2d[(blue_noise_index + 1) % (128 * 128)];
+        blue_noise_index = (blue_noise_index + 2) % (128 * 128);
+
+        // Apply some scrambling to u and v
+        u = fract(u + float(state) * 2.3283064365387e-10);
+        v = fract(v + float(state ^ 0x12345678) * 2.3283064365387e-10);
+
+        // Generate spherical coordinates
+        float theta = 2 * M_PI_F * u;
+        float phi = acos(2 * v - 1) / 2; // Divide by 2 to map to hemisphere
+
+        // Convert spherical coordinates to Cartesian
+        float3 direction;
+        direction.x = cos(theta) * sin(phi);
+        direction.y = sin(theta) * sin(phi);
+        direction.z = cos(phi);
+
+        // Ensure the direction is in the correct hemisphere
+        if (dot(direction, normal) < 0) {
+            direction = -direction;
+        }
+
+        return direction;
     }
 };
