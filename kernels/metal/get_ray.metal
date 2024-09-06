@@ -1,17 +1,12 @@
-Ray get_ray(float2 uv, float3 camera_center, float3 pixel00_loc, float3 pixel_delta_u, float3 pixel_delta_v, uint sample, uint samples, MetalRandom rand){
+Ray get_ray(float2 uv, float3 camera_center, float3 pixel00_loc, float3 pixel_delta_u, float3 pixel_delta_v, uint sample, uint samples, MetalRandom rand, const device float* blue_noise_texture){
     Ray ray;
 
     // Calculate stratum size
-    int sqrt_samples = ceil(sqrt(float(samples)));
-    float stratum_size = 1.0f / sqrt_samples;
+    float2 blue_noise = get_blue_noise_sample(sample, samples, blue_noise_texture);
     
-    // Calculate stratum indices
-    int stratum_x = sample % sqrt_samples;
-    int stratum_y = sample / sqrt_samples;
-    
-    // Generate sample within the stratum
-    float px = (stratum_x + rand.rand_float()) * stratum_size - 0.5f;
-    float py = (stratum_y + rand.rand_float()) * stratum_size - 0.5f;
+    float px = blue_noise.x - 0.5f;
+    float py = blue_noise.y - 0.5f;
+
     uv += float2(px, py);
     float3 pixel_sample = pixel00_loc + uv.x * pixel_delta_u + uv.y * pixel_delta_v;
     ray.depth = 0;

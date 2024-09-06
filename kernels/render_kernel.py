@@ -11,7 +11,9 @@ def render_kernel(image_buffer: mx.array,
                   norms: mx.array,
                   bboxes: mx.array, 
                   indices: mx.array,
-                  polygon_indices: mx.array):  # Add this parameter
+                  polygon_indices: mx.array,
+                  blue_noise_texture: mx.array,
+                  blue_noise_1d: mx.array):  # Add this parameter
 
     structures_source = ""
     get_ray_source = ""
@@ -28,20 +30,21 @@ def render_kernel(image_buffer: mx.array,
         ray_color_source = f.read()
     with open("kernels/metal/triangle_hit.metal", "r") as f:    
         triangle_hit_source = f.read()
-    header = "\n".join([structures_source, get_ray_source, blue_noise_source, triangle_hit_source, ray_color_source])
+    header = "\n".join([structures_source, blue_noise_source, get_ray_source, triangle_hit_source, ray_color_source])
 
     source = """
     uint elem = (thread_position_in_grid.x + thread_position_in_grid.y * threads_per_grid.x) * 3;
     uint x = thread_position_in_grid.x;
     uint y = thread_position_in_grid.y;
     MetalRandom rand(random_seed + elem);
+    BlueNoiseRandom blue_noise_rand(blue_noise_1d, uint(024*16), elem + random_seed);
     Ray ray = get_ray(  float2(float(x), float(y)), 
                         float3(camera_center[0], camera_center[1], camera_center[2]), 
                         float3(pixel00_loc[0], pixel00_loc[1], pixel00_loc[2]), 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
-                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, rand);
+                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, rand, blue_noise_texture);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand);
+    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand, blue_noise_rand);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -69,7 +72,9 @@ def render_kernel(image_buffer: mx.array,
                 "bboxes"        : bboxes,
                 "indices"       : indices,
                 "polygon_indices" : polygon_indices,  # Add this line
-                "random_seed"   : random_uint
+                "random_seed"   : random_uint,
+                "blue_noise_texture" : blue_noise_texture,
+                "blue_noise_1d" : blue_noise_1d
                 }, 
         template={"T": mx.float32}, 
         grid=(image_buffer.shape[0], image_buffer.shape[1], 1), 

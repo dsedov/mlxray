@@ -3,11 +3,14 @@ from .camera import Camera
 import mlx.core as mx
 import numpy as np
 from kernels.render_kernel import render_kernel
+from kernels.sharpen_kernel import sharpen_kernel
 from PySide6.QtCore import QThread, Signal
 from .vector import *
-from .bvh import BVH  # Assuming you have a BVH class implemented
+from .bvh import BVH
 import time
 from tqdm import tqdm
+from tools.bluenoise import generate_bluenoise_texture, generate_1d_bluenoise
+from scipy.ndimage import gaussian_filter
 
 class Render(QThread):
     image_ready = Signal(np.ndarray)
@@ -82,17 +85,16 @@ class Render(QThread):
 
         samples = 256
         np_image_buffer = None
-        
 
         start_time = time.time()
 
         print(f"geos shape: {geos.shape}")
         print(f"bboxes shape: {bboxes.shape}")
         print(f"indices shape: {indices.shape}")
-
-
         print(f"bboxes: {bboxes}")
 
+        blue_noise_texture = mx.array(generate_bluenoise_texture(128, 2, 30))
+        blue_noise_1d = mx.array(generate_1d_bluenoise(1024*16))
 
         for i in tqdm(range(samples), desc="Rendering", unit="sample"):
             if not self.running:
@@ -109,18 +111,25 @@ class Render(QThread):
                 norms         = norms,
                 bboxes        = bboxes,
                 indices       = indices,
-                polygon_indices = polygon_indices,  # Add this line
+                polygon_indices = polygon_indices,
+                blue_noise_texture = blue_noise_texture,
+                blue_noise_1d = blue_noise_1d
             )
-            # show image buffer
+
+            self.image_buffer.data = sharpen_kernel(self.image_buffer.data)
+
             if np_image_buffer is None:
                 np_image_buffer = np.array(self.image_buffer.data)
-                image_data = (np_image_buffer * 255).astype(np.uint8)
-                self.image_ready.emit(image_data)
             else:
                 np_image_buffer += np.array(self.image_buffer.data)
 
-                image_data = ((np_image_buffer / float(i+1)) * 255).astype(np.uint8)
-                self.image_ready.emit(image_data)
+            # Calculate average image
+            avg_image = np_image_buffer / float(i+1)
+
+            # Ensure the image is in the correct format for display
+            image_data = (avg_image * 255).clip(0, 255).astype(np.uint8)
+
+            self.image_ready.emit(image_data)
             
             # Update progress bar
             tqdm.write(f"Completed {i+1}/{samples} samples")

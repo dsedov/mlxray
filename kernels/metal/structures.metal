@@ -130,3 +130,53 @@ class random {
         }
     }
 };
+
+class BlueNoiseRandom {
+private:
+    thread const device float* array;
+    thread uint len;
+    thread uint index;
+    thread uint state;
+
+public:
+    BlueNoiseRandom(const device float* input_array, uint input_len, uint offset) {
+        array = input_array;
+        len = input_len;
+        index = offset % len;
+        state = offset; // Initialize state with offset for additional randomness
+    }
+
+    thread float rand() {
+        float result = array[index];
+        index = (index + 1) % len;
+        
+        // Simple scrambling using xorshift
+        state ^= (state << 13);
+        state ^= (state >> 17);
+        state ^= (state << 5);
+        
+        // Combine blue noise with scrambled value
+        result = fract(result + float(state) * 2.3283064365387e-10);
+        
+        return result;
+    }
+
+    thread float3 random_in_unit_sphere() {
+        float3 p;
+        do {
+            p = 2.0 * float3(this->rand(), this->rand(), this->rand()) - 1.0;
+        } while (dot(p, p) >= 1.0);
+        return p;
+    }
+    thread float3 random_unit_vector() {
+        return normalize(random_in_unit_sphere());
+    }
+    thread float3 random_on_hemisphere(float3 normal) {
+        float3 on_unit_sphere = random_unit_vector();
+        if (dot(on_unit_sphere, normal) > 0.0) {
+            return on_unit_sphere;
+        } else {
+            return -on_unit_sphere;
+        }
+    }
+};
