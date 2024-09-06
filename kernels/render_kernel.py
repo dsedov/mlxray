@@ -37,12 +37,12 @@ def render_kernel(image_buffer: mx.array,
     uint x = thread_position_in_grid.x;
     uint y = thread_position_in_grid.y;
     MetalRandom rand(random_seed + elem);
-    BlueNoiseRandom blue_noise_rand(blue_noise_1d, uint(024*16), elem + random_seed);
+    BlueNoiseRandom blue_noise_rand(blue_noise_1d, uint(1024*16), elem + random_seed);
     Ray ray = get_ray(  float2(float(x), float(y)), 
                         float3(camera_center[0], camera_center[1], camera_center[2]), 
                         float3(pixel00_loc[0], pixel00_loc[1], pixel00_loc[2]), 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
-                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, rand, blue_noise_texture);
+                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, rand, blue_noise_texture, blue_noise_rand);
 
     float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand, blue_noise_rand);
 

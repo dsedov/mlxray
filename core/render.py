@@ -83,7 +83,7 @@ class Render(QThread):
         print(f"pixel_delta_u: {self.pixel_delta_u}")
         print(f"pixel_delta_v: {self.pixel_delta_v}")
 
-        samples = 256
+        samples = 128
         np_image_buffer = None
 
         start_time = time.time()

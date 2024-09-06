@@ -1,4 +1,4 @@
-Ray get_ray(float2 uv, float3 camera_center, float3 pixel00_loc, float3 pixel_delta_u, float3 pixel_delta_v, uint sample, uint samples, MetalRandom rand, const device float* blue_noise_texture){
+Ray get_ray(float2 uv, float3 camera_center, float3 pixel00_loc, float3 pixel_delta_u, float3 pixel_delta_v, uint sample, uint samples, MetalRandom rand, const device float* blue_noise_texture, BlueNoiseRandom blue_noise_rand){
     Ray ray;
 
     // Calculate stratum size
