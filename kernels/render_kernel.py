@@ -42,9 +42,9 @@ def render_kernel(image_buffer: mx.array,
                         float3(camera_center[0], camera_center[1], camera_center[2]), 
                         float3(pixel00_loc[0], pixel00_loc[1], pixel00_loc[2]), 
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
-                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, samples, random_seed, blue_noise_texture, blue_noise_texture_size);
+                        float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), sample, blue_noise_texture);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand, sample, samples);
+    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, rand, elem + random_seed, blue_noise_texture);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -78,7 +78,7 @@ def render_kernel(image_buffer: mx.array,
                 }, 
         template={"T": mx.float32}, 
         grid=(image_buffer.shape[0], image_buffer.shape[1], 1), 
-        threadgroup=(256,1, 1), 
+        threadgroup=(128,1, 1), 
         output_shapes={"out": image_buffer.shape},
         output_dtypes={"out": image_buffer.dtype},
     )

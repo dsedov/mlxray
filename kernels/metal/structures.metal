@@ -142,16 +142,7 @@ private:
     thread bool has_2d_texture;
 
 public:
-    // Existing constructor
-    BlueNoiseRandom(const device float* input_array, uint input_len, uint offset) {
-        array = input_array;
-        len = input_len;
-        index = offset % len;
-        state = offset;
-        has_2d_texture = false;
-    }
 
-    // New constructor with 2D blue noise texture
     BlueNoiseRandom(const device float* input_array, uint input_len, uint offset, const device float* blue_noise_texture) {
         array = input_array;
         len = input_len;

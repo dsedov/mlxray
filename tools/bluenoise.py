@@ -64,7 +64,7 @@ class BlueNoiseGenerator:
         plt.show()
 
 if __name__ == "__main__":
-    size = 64
+    size = 256
     k = 100
     r = 5
 
@@ -73,9 +73,9 @@ if __name__ == "__main__":
     # Generate and display grayscale noise
     color_noise = generator.create_color_noise()
     generator.display_noise(color_noise, "Blue Noise")
-    generator.save_noise(color_noise, "64x64_3d_blue_noise.npy")
+    generator.save_noise(color_noise, f"{size}x{size}x3_blue_noise.npy")
 
     # Generate and display grayscale noise
     gray_noise = generator.create_blue_noise()
     generator.display_noise(gray_noise, "Grayscale Blue Noise")
-    generator.save_noise(gray_noise, "64x64_grayscale_blue_noise.npy")
+    generator.save_noise(gray_noise, f"{size}x{size}_grayscale_blue_noise.npy")
