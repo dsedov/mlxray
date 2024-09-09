@@ -59,12 +59,17 @@ class Render(QThread):
                 all_geos = np.vstack((all_geos, geo))
         geos = mx.array(all_geos)
 
+        print("Preparing normals")
         for norm in self.norms:
             if all_norms is None:
                 all_norms = norm
             else:
                 all_norms = np.vstack((all_norms, norm))
         norms = mx.array(all_norms)
+
+
+        print("Preparing materials")
+        materials = mx.zeros((geos.shape[0]), dtype=mx.int32)
 
         print("Building BVH")
         bvh_start_time = time.time()
@@ -99,6 +104,7 @@ class Render(QThread):
                 samples       = samples,
                 geos          = geos,
                 norms         = norms,
+                materials     = materials,
                 bboxes        = bboxes,
                 indices       = indices,
                 polygon_indices = polygon_indices,

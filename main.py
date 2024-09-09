@@ -17,6 +17,7 @@ if __name__ == "__main__":
     usd_loader = UsdLoader("cornell_box.usda")
     camera = UsdCamera.load_camera(usd_loader)
     lights = UsdLight.load_lights(usd_loader)
+    #materials = UsdMaterial.load_materials(usd_loader)
     geos, norms = UsdGeo.load_geos(usd_loader)
 
     image_buffer = ImageBuffer(2048, 1536)

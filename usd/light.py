@@ -46,8 +46,8 @@ class UsdLight:
 
                 v0 = xform.Transform(Gf.Vec3f(light.width/2.0,  -light.height/2.0, 0.0))
                 v1 = xform.Transform(Gf.Vec3f(-light.width/2.0, -light.height/2.0, 0.0))
-                v2 = xform.Transform(Gf.Vec3f(-light.width/2.0, light.height/2.0, 0.0))
-                v3 = xform.Transform(Gf.Vec3f(light.width/2.0,  light.height/2.0, 0.0))
+                v2 = xform.Transform(Gf.Vec3f(-light.width/2.0,  light.height/2.0, 0.0))
+                v3 = xform.Transform(Gf.Vec3f(light.width/2.0,   light.height/2.0, 0.0))
                 light.vertices = mx.array([
                     [v0[0], v0[1], v0[2]],
                     [v1[0], v1[1], v1[2]],

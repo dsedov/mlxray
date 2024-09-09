@@ -158,15 +158,15 @@ class BlueNoiseGenerator:
         
 
 if __name__ == "__main__":
-    size = 64
-    depth = 10
-    k = 50
+    size = 256
+    depth = 30
+    k = 50000
     r = 6
 
     generator = BlueNoiseGenerator(size, k, r)
 
     # Generate and save 3D blue noise
-    noise_3d = generator.create_blue_noise_x(10)
+    noise_3d = generator.create_blue_noise_x(depth)
     generator.save_noise(noise_3d, f"{size}x{size}x{depth}_3d_blue_noise.npy")
     print(f"3D Blue noise shape: {noise_3d.shape}")
 
