@@ -10,8 +10,7 @@ float3 ray_color(Ray ray,
                 const device float* norms, 
                 const device float* bboxes, 
                 const device int* indices, 
-                const device int* polygon_indices, 
-                MetalRandom rand, 
+                const device int* polygon_indices,
                 uint sample, 
                 const device float* blue_noise_texture) { 
     HitRecordStack hit_record_stack;
@@ -26,7 +25,7 @@ float3 ray_color(Ray ray,
     hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;
 
     for (uint i = 1; i < MAX_DEPTH; i++) {
-        float3 direction = get_blue_noise_on_hemisphere(-hit_record.normal, sample + i*64, blue_noise_texture);
+        float3 direction = get_blue_noise_on_hemisphere(-hit_record.normal, sample + i, blue_noise_texture);
         hit_record = hit(Ray{hit_record.p, direction}, Interval{0.0001, 10000.0}, geos, norms, bboxes, indices, polygon_indices);
         if (hit_record.hit) {
             hit_record_stack.hit_records[hit_record_stack.count++] = hit_record;

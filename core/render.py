@@ -88,7 +88,7 @@ class Render(QThread):
         start_time = time.time()
 
         blue_noise_generator = BlueNoiseGenerator(256, 100, 5)
-        blue_noise_texture = blue_noise_generator.load_noise(filename="256x256x3_blue_noise.npy")
+        blue_noise_texture = blue_noise_generator.load_noise(filename="512x512x4_3d_blue_noise.npy")
         blue_noise_texture_size = blue_noise_texture.shape[0]
 
         for i in tqdm(range(samples), desc="Rendering", unit="sample"):

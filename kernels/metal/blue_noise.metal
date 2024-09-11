@@ -1,14 +1,14 @@
 
 thread float2 get_blue_noise_sample(uint sample, const device float* blue_noise_texture) {
-    const int TEXTURE_SIZE = 256; // Size of the blue noise texture
+    const int TEXTURE_SIZE = 512; // Size of the blue noise texture
 
     // Use the sample index to look up in the blue noise texture
     uint x = sample % TEXTURE_SIZE;
     uint y = (sample / TEXTURE_SIZE) % TEXTURE_SIZE;
-    uint index = y * TEXTURE_SIZE + x;
+    uint index = (x + y * TEXTURE_SIZE) * 4;
 
     // Fetch the blue noise value
-    float2 blue_noise = float2(blue_noise_texture[index * 2], blue_noise_texture[index * 2 + 1]);
+    float2 blue_noise = float2(blue_noise_texture[index], blue_noise_texture[index + 1]);
     return blue_noise;
 
 
@@ -20,20 +20,19 @@ thread float2 get_blue_noise_sample(uint sample, const device float* blue_noise_
     );
 
     // Combine blue noise with scrambling
-    return fract(blue_noise + scramble);
+    return fract(blue_noise);
 }
 thread float3 get_blue_noise_sample_3d(uint sample, const device float* blue_noise_texture) {
-    uint TEXTURE_SIZE = 256; // Size of the blue noise texture
+    uint TEXTURE_SIZE = 512; // Size of the blue noise texture
 
     // Use the sample index to look up in the blue noise texture
     uint x = sample % TEXTURE_SIZE;
     uint y = (sample / TEXTURE_SIZE) % TEXTURE_SIZE;
 
-    uint index = (x + y * TEXTURE_SIZE) * 3;
+    uint index = (x + y * TEXTURE_SIZE) * 4;
 
     // Fetch the blue noise value
-    float3 blue_noise = float3(blue_noise_texture[index], blue_noise_texture[index + 1], blue_noise_texture[index + 2]);
-    return blue_noise;
+    return float3(blue_noise_texture[index], blue_noise_texture[index + 1], blue_noise_texture[index + 2]);
 }
 thread float3 get_blue_noise_in_unit_sphere(uint sample, const device float* blue_noise_texture) {
     float3 p;
