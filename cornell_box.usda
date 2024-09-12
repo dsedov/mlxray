@@ -209,7 +209,7 @@ def Scope "materials"
         def Shader "mtlxstandard_surface"
         {
             uniform token info:id = "ND_standard_surface_surfaceshader_100"
-            float inputs:base (
+            float inputs:base = 1 (
                 customData = {
                     dictionary HoudiniPreviewTags = {
                         double default_value = 1
