@@ -21,7 +21,7 @@ if __name__ == "__main__":
     materials = UsdMaterial.load_materials(usd_loader)
     geos, norms = UsdGeo.load_geos(usd_loader)
 
-    image_buffer = ImageBuffer(2048, 1536)
+    image_buffer = ImageBuffer(1024, 1024)
     
     render = Render(image_buffer, camera, lights, geos, norms)
 
