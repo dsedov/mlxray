@@ -142,7 +142,14 @@ HitRecord triangle_hit(Ray ray, Interval ray_t, float3 v0, float3 v1, float3 v2,
     return hit_record;
 }
 
-HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device float* norms, const device float* bboxes, const device int* indices, const device int* polygon_indices) {
+HitRecord hit(  Ray ray, 
+                Interval ray_t, 
+                const device float* geos, 
+                const device float* norms, 
+                const device int* mats, 
+                const device float* bboxes, 
+                const device int* indices, 
+                const device int* polygon_indices) {
     BVH root;
     root.init(0, geos, bboxes, indices, polygon_indices);
     HitRecord global_hit_record;
@@ -177,6 +184,7 @@ HitRecord hit(Ray ray, Interval ray_t, const device float* geos, const device fl
                 if (hit_record.hit && hit_record.t < ray_t.max) {
                     ray_t.max = hit_record.t;
                     global_hit_record = hit_record;
+                    global_hit_record.mat = mats[idx];
                 }
             }
         } else {

@@ -19,11 +19,13 @@ if __name__ == "__main__":
     camera = UsdCamera.load_camera(usd_loader)
     lights = UsdLight.load_lights(usd_loader)
     materials = UsdMaterial.load_materials(usd_loader)
-    geos, norms = UsdGeo.load_geos(usd_loader)
+    geos, norms, mats = UsdGeo.load_geos(usd_loader, materials)
+    print(f"Loaded {len(geos)} geos, {len(norms)} normals, {len(mats)} materials")
+    print(f"Material: {mats}")
 
     image_buffer = ImageBuffer(1024, 1024)
     
-    render = Render(image_buffer, camera, lights, geos, norms)
+    render = Render(image_buffer, camera, lights, geos, norms, mats)
 
     app = QApplication(sys.argv)
     window = RenderWindow(render)

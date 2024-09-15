@@ -15,6 +15,7 @@ struct HitRecord{
     float3 p;
     float3 normal;
     bool front_face;
+    int mat;
     float debug;
 };
 class MetalRandom {

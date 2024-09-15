@@ -9,7 +9,7 @@ def render_kernel(image_buffer: mx.array,
                   samples: int,
                   geos: mx.array,
                   norms: mx.array,
-                  materials: mx.array,
+                  mats: mx.array,
                   bboxes: mx.array, 
                   indices: mx.array,
                   polygon_indices: mx.array,
@@ -44,7 +44,7 @@ def render_kernel(image_buffer: mx.array,
                         float3(pixel_delta_u[0], pixel_delta_u[1], pixel_delta_u[2]), 
                         float3(pixel_delta_v[0], pixel_delta_v[1], pixel_delta_v[2]), elem + random_seed, blue_noise_texture);
 
-    float3 color = ray_color(ray, geos, norms, bboxes, indices, polygon_indices, elem + random_seed, blue_noise_texture);
+    float3 color = ray_color(ray, geos, norms, mats, bboxes, indices, polygon_indices, elem + random_seed, blue_noise_texture);
 
     out[elem]     = color[0];
     out[elem + 1] = color[1];
@@ -69,6 +69,7 @@ def render_kernel(image_buffer: mx.array,
                 "samples"       : samples,
                 "geos"          : geos,
                 "norms"         : norms,
+                "mats"          : mats,
                 "bboxes"        : bboxes,
                 "indices"       : indices,
                 "polygon_indices" : polygon_indices,  # Add this line
@@ -78,7 +79,7 @@ def render_kernel(image_buffer: mx.array,
                 }, 
         template={"T": mx.float32}, 
         grid=(image_buffer.shape[0], image_buffer.shape[1], 1), 
-        threadgroup=(128,1, 1), 
+        threadgroup=(64,1, 1), 
         output_shapes={"out": image_buffer.shape},
         output_dtypes={"out": image_buffer.dtype},
     )

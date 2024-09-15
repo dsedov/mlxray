@@ -17,7 +17,8 @@ class UsdMaterial:
         usd_materials = UsdMaterial.find_materials_recursively(usd_loader.stage.GetPseudoRoot())
 
         for usd_material in usd_materials:
-            print(f"\nLoaded material: {usd_material.GetPath()}")
+            parent = usd_material.GetPrim().GetParent()
+            print(f"\nLoaded material: {parent.GetPath()}")
             base_weight = 1.0
             base_color = mx.array([1.0, 1.0, 1.0])
             metalness = 0.0
@@ -66,7 +67,7 @@ class UsdMaterial:
             else:
                 print(f"No shader found for {usd_material.GetPath()}")
             material = Material(
-                name=usd_material.GetPath().name,
+                name=parent.GetPath(),
                 base_weight=base_weight, 
                 base_color=base_color, 
                 metalness=metalness, 

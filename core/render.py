@@ -15,7 +15,7 @@ from scipy.ndimage import gaussian_filter
 class Render(QThread):
     image_ready = Signal(np.ndarray)
 
-    def __init__(self, image_buffer: ImageBuffer, camera: Camera, lights: list, geos: list, norms: list, is_vertical_fov = False, fov_in_degrees = True):
+    def __init__(self, image_buffer: ImageBuffer, camera: Camera, lights: list, geos: list, norms: list, mats: list, is_vertical_fov = False, fov_in_degrees = True):
         super().__init__()
 
         self.running = True
@@ -24,6 +24,7 @@ class Render(QThread):
         self.lights = lights
         self.geos = geos
         self.norms = norms
+        self.mats = mats
 
         print("Initialized render engine")
         focal_length = mx.linalg.norm(self.camera.center - self.camera.look_at)
@@ -52,6 +53,7 @@ class Render(QThread):
         print("Preparing geos")
         all_geos = None 
         all_norms = None
+        all_mats = None
         for geo in self.geos:
             if all_geos is None:
                 all_geos = geo
@@ -69,7 +71,12 @@ class Render(QThread):
 
 
         print("Preparing materials")
-        materials = mx.zeros((geos.shape[0]), dtype=mx.int32)
+        for mat in self.mats:
+            if all_mats is None:
+                all_mats = mat
+            else:
+                all_mats = np.vstack((all_mats, mat))
+        mats = mx.array(all_mats, dtype=mx.int32)  
 
         print("Building BVH")
         bvh_start_time = time.time()
@@ -104,7 +111,7 @@ class Render(QThread):
                 samples       = samples,
                 geos          = geos,
                 norms         = norms,
-                materials     = materials,
+                mats          = mats,
                 bboxes        = bboxes,
                 indices       = indices,
                 polygon_indices = polygon_indices,
